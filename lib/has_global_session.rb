@@ -17,25 +17,27 @@ module HasGlobalSession
   end
   
   class Directory
-    attr_reader :authorities, :my_key, :my_name
+    attr_reader :authorities, :my_private_key, :my_authority_name
     
     def initialize
       dir   = File.join(RAILS_ROOT, 'config', 'authorities')
-      certs = Dir[File.join(dir, '*.cert')] + Dir[File.join(dir, '*.crt')]
-      keys  = Dir[File.join(dir, '*.key')] + Dir[File.join(dir, '*.pvk')]
+      certs = Dir[File.join(dir, '*.pub')]
+      keys  = Dir[File.join(dir, '*.key')]
 
       @authorities = {}
       certs.each do |cert_file|
-        cert_file = File.basename(cert_file)
-        authority = cert_file[0..(cert_file.rindex('.'))] #chop trailing .ext
-        @authorities[authority] = File.read(cert_file)
+        basename = File.basename(cert_file)
+        authority = basename[0...(basename.rindex('.'))] #chop trailing .ext
+        @authorities[authority] = OpenSSL::PKey::RSA.new(File.read(cert_file))
+        raise TypeError, "Expected #{basename} to contain an RSA public key" unless @authorities[authority].public?
       end
 
-      raise ArgumentError, "Excepted 0 or 1 key file, found #{keys.size}" if keys.size > 0
-      if keys[0]
-        key_file = File.basename(keys[0])
-        @my_key  = File.read(keys[0])
-        @my_name = key_file[0..(key_file.rindex('.'))] #chop trailing .ext
+      raise ArgumentError, "Excepted 0 or 1 key files, found #{keys.size}" if ![0, 1].include?(keys.size)
+      if (key_file = keys[0])
+        basename = File.basename(key_file)
+        @my_private_key  = OpenSSL::PKey::RSA.new(File.read(key_file))
+        raise TypeError, "Expected #{basename} to contain an RSA private key" unless @my_private_key.private?
+        @my_authority_name = basename[0...(basename.rindex('.'))] #chop trailing .ext
       end
     end
   end
@@ -60,18 +62,22 @@ module HasGlobalSession
         @signed     = hash['ds']
         @insecure   = hash['dx']
         @signature  = hash['s']
+        @authority  = hash['a']
+
         hash.delete('s')
-        #TODO better signature (public-key crypto)
-        expected = Digest::SHA1.new().update(ActiveSupport::JSON.encode(canonicalize(hash))).hexdigest
-        unless (@signature == expected)
+        expected = digest(hash)
+        got      = @directory.authorities[@authority].public_decrypt(Base64.decode64(@signature))
+        unless (got == expected)
           raise SecurityError, "Signature mismatch on global session hash; tampering suspected"
         end
       else
-        @signed     = {}
-        @insecure   = {}
-        @id         = rand(2**160).to_s(16).ljust(40, '0')    #TODO better randomness 
-        @created_at = Time.now.utc
-        @expires_at = 2.hours.from_now.utc #TODO configurable
+        @signed          = {}
+        @insecure        = {}
+        @id              = rand(2**160).to_s(16).ljust(40, '0')    #TODO better randomness
+        @created_at      = Time.now.utc
+        @expires_at      = 2.hours.from_now.utc #TODO configurable
+        @authority       = @directory.my_authority_name
+        @dirty_signature = true
       end
     end
 
@@ -81,6 +87,10 @@ module HasGlobalSession
 
     def []=(key, value)
       if @@signed.include?(key)
+        unless @directory.my_private_key && @directory.my_authority_name
+          raise StandardError, 'Cannot change secure session attributes; we are not an authority'
+        end
+
         @signed[key] = value
         @dirty_signature = true
       elsif @@insecure.include?(key)
@@ -91,22 +101,34 @@ module HasGlobalSession
     end
 
     def to_s
-      hash = {'id'=>@id, 'tc'=>@created_at.to_i, 'te'=>@expires_at.to_i, 'ds'=>@signed, 'dx'=>@insecure}
+      hash = {'id'=>@id,
+              'tc'=>@created_at.to_i, 'te'=>@expires_at.to_i,
+              'ds'=>@signed, 'dx'=>@insecure}
 
       if @signature && !@dirty_signature
-        #for speed, use cached signature
+        #use cached signature unless we've changed secure state
+        authority = @authority
         signature = @signature
       else
-        #TODO better signature (public-key crypto)
-        signature = Digest::SHA1.new().update(ActiveSupport::JSON.encode(canonicalize(hash))).hexdigest
+        authority = @directory.my_authority_name
+        hash['a'] = authority
+        digest    = digest(hash)
+        signature = Base64.encode64(@directory.my_private_key.private_encrypt(digest))
       end
+
       hash['s'] = signature
+      hash['a'] = authority
       json = ActiveSupport::JSON.encode(hash)
       zbin = Zlib::Deflate.deflate(json, Zlib::BEST_COMPRESSION)
       return Base64.encode64(zbin)
     end
 
     private
+
+    def digest(input)
+      canonical = ActiveSupport::JSON.encode(canonicalize(input))
+      return Digest::SHA1.new().update(canonical).hexdigest
+    end
 
     def canonicalize(input)
       case input
@@ -130,13 +152,12 @@ module HasGlobalSession
 
   module InstanceMethods
     def global_session
-      @global_session ||= GlobalSession.new(Directory.new)
-    end
+      return @global_session if @global_session
 
-    def global_session_initialize()
       begin
         cookie = cookies[Configuration['cookie']['name']]
         @global_session = GlobalSession.new(Directory.new, cookie) if cookie && (cookie.length > 0)
+        return @global_session
       rescue Exception => e
         cookies.delete Configuration['cookie']['name']
         raise e
@@ -144,7 +165,7 @@ module HasGlobalSession
     end
 
     def global_session_update
-      cookies[Configuration['cookie']['name']] = @global_session.to_s 
+      cookies[Configuration['cookie']['name']] = @global_session.to_s
     end
   end
 end
