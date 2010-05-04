@@ -7,7 +7,9 @@ Introduction goes here.
 Example
 =======
 
-Example goes here.
+class FooController < ApplicationController
+  has_global_session
+end
 
 To-Do
 =====
