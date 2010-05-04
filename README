@@ -9,5 +9,11 @@ Example
 
 Example goes here.
 
+To-Do
+=====
 
-Copyright (c) 2010 [name of plugin creator], released under the MIT license
+ * Discard expired global session during request setup
+ * Optional before-filter to keep local session in sync with global session
+
+
+Copyright (c) 2010 Tony Spataro <code@tracker.xeger.net>, released under the MIT license

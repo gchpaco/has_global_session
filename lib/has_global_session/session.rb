@@ -41,26 +41,7 @@ module HasGlobalSession
         @created_at      = Time.now.utc
         @expires_at      = 2.hours.from_now.utc #TODO configurable
         @authority       = @directory.my_authority_name
-        @dirty_signature = true
-      end
-    end
-
-    def [](key)
-      @signed[key] || @insecure[key]
-    end
-
-    def []=(key, value)
-      if @@signed.include?(key)
-        unless @directory.my_private_key && @directory.my_authority_name
-          raise StandardError, 'Cannot change secure session attributes; we are not an authority'
-        end
-
-        @signed[key] = value
-        @dirty_signature = true
-      elsif @@insecure.include?(key)
-        @insecure[key] = value
-      else
-        raise ArgumentError, "Key '#{key}' is not specified in global session configuration"
+        @dirty_secure    = true
       end
     end
 
@@ -77,7 +58,7 @@ module HasGlobalSession
               'tc'=>@created_at.to_i, 'te'=>@expires_at.to_i,
               'ds'=>@signed, 'dx'=>@insecure}
 
-      if @signature && !@dirty_signature
+      if @signature && !@dirty_secure
         #use cached signature unless we've changed secure state
         authority = @authority
         signature = @signature
@@ -93,6 +74,38 @@ module HasGlobalSession
       json = ActiveSupport::JSON.encode(hash)
       zbin = Zlib::Deflate.deflate(json, Zlib::BEST_COMPRESSION)
       return Base64.encode64(zbin)
+    end
+
+    def [](key)
+      @signed[key] || @insecure[key]
+    end
+
+    def []=(key, value)
+      if @@signed.include?(key)
+        unless @directory.my_private_key && @directory.my_authority_name
+          raise StandardError, 'Cannot change secure session attributes; we are not an authority'
+        end
+
+        @signed[key]  = value
+        @dirty_secure = true
+      elsif @@insecure.include?(key)
+        @insecure[key] = value
+      else
+        raise ArgumentError, "Key '#{key}' is not specified in global session configuration"
+      end
+    end
+
+    def keys
+      (@secure.keys + @insecure.keys)
+    end
+
+    def values
+      (@secure.values + @insecure.values)
+    end
+
+    def each_pair(&block)
+      @secure.each_pair(&block)
+      @insecure.each_pair(&block)
     end
 
     private
