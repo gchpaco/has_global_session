@@ -1,23 +1,32 @@
+require 'rubygems'
 require 'rake'
-require 'rake/testtask'
+require 'spec/rake/spectask'
 require 'rake/rdoctask'
 
-desc 'Default: run unit tests.'
-task :default => :test
+desc "Run unit tests"
+task :default => :spec
 
-desc 'Test the has_global_session plugin.'
-Rake::TestTask.new(:test) do |t|
-  t.libs << 'lib'
-  t.libs << 'test'
-  t.pattern = 'test/**/*_test.rb'
-  t.verbose = true
+desc "Run unit tests"
+Spec::Rake::SpecTask.new do |t|
+  t.spec_files = Dir['**/*_spec.rb']
+  t.spec_opts = lambda do
+    IO.readlines(File.join(File.dirname(__FILE__), 'spec', 'spec.opts')).map {|l| l.chomp.split " "}.flatten
+  end
 end
 
 desc 'Generate documentation for the has_global_session plugin.'
 Rake::RDocTask.new(:rdoc) do |rdoc|
   rdoc.rdoc_dir = 'rdoc'
-  rdoc.title    = 'HasGlobalSession'
+  rdoc.title    = 'has_global_session'
   rdoc.options << '--line-numbers' << '--inline-source'
   rdoc.rdoc_files.include('README')
   rdoc.rdoc_files.include('lib/**/*.rb')
+end
+
+desc "Build has_global_session gem"
+task :gem do
+   ruby 'has_global_session.gemspec'
+   pkg_dir = File.join(File.dirname(__FILE__), 'pkg')
+   FileUtils.mkdir_p(pkg_dir)
+   FileUtils.mv(Dir.glob(File.join(File.dirname(__FILE__), '*.gem')), pkg_dir)
 end

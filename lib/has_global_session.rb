@@ -1,7 +1,7 @@
 basedir = File.dirname(__FILE__)
 require File.join(basedir, 'has_global_session', 'configuration')
 require File.join(basedir, 'has_global_session', 'directory')
-require File.join(basedir, 'has_global_session', 'session')
+require File.join(basedir, 'has_global_session', 'global_session')
 
 module HasGlobalSession
   module ActionControllerInstanceMethods
@@ -10,16 +10,27 @@ module HasGlobalSession
 
       begin
         cookie = cookies[Configuration['cookie']['name']]
-        if cookie && (cookie.length > 0)
-          #unserialize the global session from the cookie
-          @global_session = Session.new(Directory.new, cookie)
-        else
+        directory = Directory.new
+
+        begin
+          #unserialize the global session from the cookie, or
+          #initialize a new global session if cookie == nil
+          @global_session = GlobalSession.new(directory, cookie)
+        rescue SessionExpired
+          #if the cookie is present but expired, silently
           #initialize a new global session
-          @global_session = Session.new(Directory.new)
+          @global_session = GlobalSession.new(directory)
         end
       rescue Exception => e
         cookies.delete Configuration['cookie']['name']
         raise e
+      end
+    end
+
+    if Configuration['integrated']
+      def session
+        @integrated_session ||= IntegratedSession.new(super, global_session)
+        return @integrated_session
       end
     end
 

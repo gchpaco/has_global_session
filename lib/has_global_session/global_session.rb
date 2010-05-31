@@ -2,19 +2,23 @@ require 'set'
 require 'zlib'
 
 module HasGlobalSession
-  class Session
-    @@signed   = nil
-    @@insecure = nil
+  class SessionExpired < Exception; end
+  
+  class GlobalSession
+    @@signed   = Set.new((Configuration['attributes']['signed'] rescue []))
+    @@insecure = Set.new((Configuration['attributes']['insecure'] rescue []))
+
+    def self.supports_key?(key)
+      @@signed.include?(key) || @@insecure.include?(key)
+    end
 
     attr_reader :id, :authority, :created_at, :expires_at
 
     def initialize(directory, cookie=nil)
-      @@signed   ||= Set.new((Configuration['attributes']['signed'] rescue []))
-      @@insecure ||= Set.new((Configuration['attributes']['insecure'] rescue []))
-
       @directory = directory
 
       if cookie
+        #User presented us with a cookie; let's decrypt and verify it
         zbin = Base64.decode64(cookie)
         json = Zlib::Inflate.inflate(zbin)
         hash = ActiveSupport::JSON.decode(json)
@@ -32,7 +36,11 @@ module HasGlobalSession
         raise SecurityError, "Unknown signing authority #{@authority}" unless signer
         got      = signer.public_decrypt(Base64.decode64(@signature))
         unless (got == expected)
-          raise SecurityError, "Signature mismatch on global session hash; tampering suspected"
+          raise SecurityError, "Signature mismatch on global session cookie; tampering suspected"
+        end
+
+        if expired?
+          raise GlobalSession, "Global session cookie has expired"
         end
       else
         @signed          = {}
@@ -51,6 +59,7 @@ module HasGlobalSession
 
     def expire!
       @expires_at = Time.at(0)
+      @dirty_secure = true
     end
 
     def to_s
@@ -95,16 +104,20 @@ module HasGlobalSession
       end
     end
 
+    def has_key?(key)
+      @signed.has_key(key) || @insecure.has_key?(key)
+    end
+    
     def keys
-      (@secure.keys + @insecure.keys)
+      @signed.keys + @insecure.keys
     end
 
     def values
-      (@secure.values + @insecure.values)
+      @signed.values + @insecure.values
     end
 
     def each_pair(&block)
-      @secure.each_pair(&block)
+      @signed.each_pair(&block)
       @insecure.each_pair(&block)
     end
 

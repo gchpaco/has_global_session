@@ -14,8 +14,8 @@ end
 To-Do
 =====
 
- * Discard expired global session during request setup
- * Optional before-filter to keep local session in sync with global session
+ * Renew session when it may be expiring soon
+ * Configurable session expiry
  * Option for sticky global session (persists across browser restarts)
 
 Copyright (c) 2010 Tony Spataro <code@tracker.xeger.net>, released under the MIT license
