@@ -4,8 +4,14 @@ module HasGlobalSession
       return @global_session if @global_session
 
       begin
+        if (klass = Configuration['directory'])
+          klass = klass.constantize
+        else
+          klass = Directory
+        end
+
+        directory = klass.new(File.join(RAILS_ROOT, 'config', 'authorities'))
         cookie = cookies[Configuration['cookie']['name']]
-        directory = Directory.new(File.join(RAILS_ROOT, 'config', 'authorities'))
 
         begin
           #unserialize the global session from the cookie, or
