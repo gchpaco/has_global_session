@@ -1,0 +1,2 @@
+./script/generate global_session config <DNS domain for cookie>
+./script/generate global_session authority <name of authority>

@@ -1,18 +1,144 @@
-HasGlobalSession
-================
+= Introduction =
 
-Introduction goes here.
+HasGlobalSession enables multiple heterogeneous Web applications to share
+session state in a cryptographically secure way, facilitating single sign-on
+and enabling easier development of large-scale distributed applications that
+make use of architectural strategies such as sharding or separation of concerns.
 
+This plugin does not provide a complete solution for authentication. In
+particular, it does _not_ provide any of the following:
+ * federated identity (cross-domain single sign-on) -- use OpenID for that.
+ * authentication -- the application's controllers must authenticate the user
+   (although they may store the authenticated user ID in the global session
+   in order to provide single sign-on).
+ * data secrecy -- global session attributes can be signed but never encrypted;
+   protect against third-party snooping using SSL, and if you don't want your
+   users to see their session state, put it in the local session.
+ * database replication -- the authentication authorities must have some way
+   to share information about the database of users, their passwords, etc.
+ * single sign-out -- the authorities must have some way to broadcast a
+   notification when sessiona are invalidated, e.g. when a user signs out.
 
-Example
-=======
+== Global Session Contents ==
 
-class FooController < ApplicationController
-  has_global_session
-end
+Global session state is stored as a cookie in the user's browser. The cookie
+is a Zlib-compressed JSON dictionary containing the following stuff:
+ * session metadata (UUID, created-at, expires-at, certifying-authority)
+ * signed session attributes (e.g. the authenticated user ID)
+ * insecure session attributes (e.g. the last-visited URL)
+ * a cryptographic signature of the metadata and signed attributes
 
-To-Do
-=====
+The global session is unserialized and its signature is verified whenever
+a controller asks for the global session. The cookie's value is updated
+whenever its attributes change. As an optimization, the signature is only
+recomputed when the metadata or signed attributes have changed; insecure
+attributes can change "for free."
+
+Because the security properties of attributes can vary, HasGlobalSession
+requires all _possible_ attributes to be declared up-front in the config
+file. The 'attributes' section of the config file defines the _schema_
+for the global session: which attributes can be used, and which must be
+cryptographically signed in order to be used.
+
+Since the session is serialized as JSON, only a limited range of object
+types can be stored in it: strings, numbers, lists, hashes and other Ruby
+primitives. Ruby booleans (true/false) do not translate well into JSON
+and should be avoided.
+
+= Example =
+
+1) Create a basic config file and edit it to suit your needs:
+      $ script/generate global_session_config mycoolapp.com
+
+2) Create an authentication authority:
+      $ script/generate global_session_authority mycoolapp
+
+3) Declare that some or all of your application's controllers will have access
+   to the global session:
+      class ApplicationController < ActionController::Base
+        has_global_session
+      end
+
+4) Make use of the global session hash in your controllers:
+      global_session['user'] = @user.id
+      ...
+      @current_user = User.find(global_session['user'])
+
+= Detailed Information =
+
+== Global Session Domain ==
+
+We refer to collection of _all_ Web application instances capable of using the
+global session as the "domain." The global session domain may consist of any
+number of distinct servers, possibly hidden behind load balancers or proxies.
+The servers within the domain may all be running the same Rails application,
+or they may be running different codebases that represent different parts of
+a distributed application. (They may also be using app frameworks other than
+Rails.)
+
+The only constraint imposed by HasGlobalSession is that all servers within the
+domain must have end-user-facing URLs within the same second-level DNS domain.
+This is due to limitations imposed by the HTTP cookie mechanism: for privacy
+reasons, cookies will only be sent to servers within the same domain as the
+server that first created them.
+
+For example, in my HasGlobalSession configuration file I might specify that my
+cookie's domain is "example.com". My app servers at app1.example.com and
+app2.example.com would be part of the global session domain, but my business
+partner's application at www.partner.com could not participate.
+
+== Authorities and Relying Parties ==
+
+A Web application that can create or update the global session is said to
+be an "authority" (because it's trusted by other parties to make assertions
+about global session state). An application that can read the global session
+is said to be a "relying party." In practice, every application is a relying
+party but not all of them need to be authorities.
+
+There is an RSA key pair associated with each authority. The authority's
+public key is distribued to all relying parties, but the private key must
+remain a secret to that authority (which may consist of many individual
+servers).
+
+This system allows for significant flexibility when configuring a distributed
+app's global session. There must be at least one authority, but for many apps
+one authority (plus an arbitrary number of relying parties, which do not need
+a key pair) will be sufficient.
+
+In general, two systems should be part of the same authority if there is no
+trust boundary between them -- that is to say, trust between the two systems
+is unlimited in both directions.
+
+Here are some reasons you might consider dividing your systems into different
+authorities:
+ * beta/staging system vs. production system
+ * system hosted by a third party vs. system hosted internally
+ * e-commerce server vs. storefront server
+
+== The Directory ==
+
+The Directory is a Ruby object instantiated by HasGlobalSession in order to
+perform lookups of public and private keys. Given an authority name (as found
+in a session cookie), the Directory can find the corresponding public key.
+
+If the local system is an authority itself, the method #my_authority_name will
+return non-nil and #my_private_key will return a private key suitable for
+signing session attributes.
+
+The Directory implementation included with HasGlobalSession uses the filesystem
+as the backing store for its key pairs. Its #initialize method accepts a
+filesystem path that will be searched for *.pub and *.key files containing PEM-
+encoded public and private keys (the same format used by OpenSSH).
+
+When used with a Rails app, HasGlobalSession expects to find its keystore in
+config/authorities. You can use the global_session generator to create new key
+pairs. Remember never to check a *.key file into a public repository!! (In
+contrast, *.pub files can be distributed freely.) 
+
+If you wish all of the systems to stop trusting an authority, simply delete
+its public key from config/authorities.
+
+= To-Do =
 
  * Renew session when it may be expiring soon
  * Configurable session expiry

@@ -1,3 +1,18 @@
-# Stub to invoke real init.rb if this plugin is invoked as a Rails GemPlugin
-basedir = File.dirname(__FILE__)
-require File.join(basedir, '..', 'init')
+basedir = File.expand_path(File.join(File.dirname(__FILE__), '..'))
+require File.join(basedir, 'lib', 'has_global_session')
+
+# Tie the Configuration module to Rails' filesystem structure
+# and operating environment.
+HasGlobalSession::Configuration.config_file =
+  File.join(RAILS_ROOT, 'config', 'global_session.yml')
+HasGlobalSession::Configuration.environment = RAILS_ENV
+
+require File.join(basedir, 'rails', 'action_controller_instance_methods')
+
+# Enable ActionController integration.
+class ActionController::Base
+  def self.has_global_session
+    include HasGlobalSession::ActionControllerInstanceMethods
+    after_filter  :global_session_update_cookie
+  end
+end

@@ -2,10 +2,9 @@ module HasGlobalSession
   class Directory
     attr_reader :authorities, :my_private_key, :my_authority_name
 
-    def initialize
-      dir   = File.join(RAILS_ROOT, 'config', 'authorities')
-      certs = Dir[File.join(dir, '*.pub')]
-      keys  = Dir[File.join(dir, '*.key')]
+    def initialize(keystore_directory)
+      certs = Dir[File.join(keystore_directory, '*.pub')]
+      keys  = Dir[File.join(keystore_directory, '*.key')]
 
       @authorities = {}
       certs.each do |cert_file|

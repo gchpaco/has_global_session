@@ -1,0 +1,30 @@
+# Common settings of the global session (that apply to all Rails environments)
+# are listed here. These may be overidden in the environment-specific section,
+# but it seldom makes sense to do so.
+common:
+  attributes:
+    # Signed attributes of the global session
+    signed:
+    - user
+    # Untrusted attributes of the global session
+    insecure:
+    - account
+  # Enable local session integration in order to use the ActionController
+  # method #session to access both local AND global session state, with
+  # global attributes always taking precedence over local attributes.
+  integrated: true
+
+development:
+  cookie:
+    name: __<%= app_name %>_development
+    domain: localhost
+
+test:
+  cookie:
+    name: __<%= app_name %>_test
+    domain: localhost
+
+production:
+  cookie:
+    name: __<%= app_name %>_global
+    domain: <%= app_domain %>

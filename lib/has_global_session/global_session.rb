@@ -1,21 +1,20 @@
+# Standard library dependencies
 require 'set'
 require 'zlib'
+
+# Gem dependencies
+require 'uuidtools'
 
 module HasGlobalSession
   class SessionExpired < Exception; end
   
   class GlobalSession
-    @@signed   = Set.new((Configuration['attributes']['signed'] rescue []))
-    @@insecure = Set.new((Configuration['attributes']['insecure'] rescue []))
-
-    def self.supports_key?(key)
-      @@signed.include?(key) || @@insecure.include?(key)
-    end
-
     attr_reader :id, :authority, :created_at, :expires_at
 
     def initialize(directory, cookie=nil)
-      @directory = directory
+      @schema_signed   = Set.new((Configuration['attributes']['signed'] rescue []))
+      @schema_insecure = Set.new((Configuration['attributes']['insecure'] rescue []))
+      @directory       = directory
 
       if cookie
         #User presented us with a cookie; let's decrypt and verify it
@@ -45,12 +44,16 @@ module HasGlobalSession
       else
         @signed          = {}
         @insecure        = {}
-        @id              = rand(2**160).to_s(16).ljust(40, '0')    #TODO better randomness
+        @id              = UUIDTools::UUID.timestamp_create.to_s
         @created_at      = Time.now.utc
         @expires_at      = 2.hours.from_now.utc #TODO configurable
         @authority       = @directory.my_authority_name
         @dirty_secure    = true
       end
+    end
+
+    def supports_key?(key)
+      @schema_signed.include?(key) || @schema_insecure.include?(key)
     end
 
     def expired?
@@ -90,17 +93,17 @@ module HasGlobalSession
     end
 
     def []=(key, value)
-      if @@signed.include?(key)
+      if @schema_signed.include?(key)
         unless @directory.my_private_key && @directory.my_authority_name
           raise StandardError, 'Cannot change secure session attributes; we are not an authority'
         end
 
         @signed[key]  = value
         @dirty_secure = true
-      elsif @@insecure.include?(key)
+      elsif @schema_insecure.include?(key)
         @insecure[key] = value
       else
-        raise ArgumentError, "Key '#{key}' is not specified in global session configuration"
+        raise ArgumentError, "Attribute '#{key}' is not specified in global session configuration"
       end
     end
 

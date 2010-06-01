@@ -6,7 +6,7 @@ module HasGlobalSession
     end
 
     def [](key)
-      if GlobalSession.supports_key?(key)
+      if @global_session.supports_key?(key)
         @global_session[key]
       else
         @local_session[key]
@@ -14,7 +14,7 @@ module HasGlobalSession
     end
 
     def []=(key, value)
-      if GlobalSession.supports_key?(key)
+      if @global_session.supports_key?(key)
         @global_session[key] = value
       else
         @local_session[key] = value
