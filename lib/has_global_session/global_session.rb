@@ -5,9 +5,7 @@ require 'zlib'
 # Gem dependencies
 require 'uuidtools'
 
-module HasGlobalSession
-  class SessionExpired < Exception; end
-  
+module HasGlobalSession 
   class GlobalSession
     attr_reader :id, :authority, :created_at, :expires_at
 
@@ -38,9 +36,10 @@ module HasGlobalSession
           raise SecurityError, "Signature mismatch on global session cookie; tampering suspected"
         end
 
-        if expired?
-          raise GlobalSession, "Global session cookie has expired"
+        if expired? || @directory.invalidated_session?(@id)
+          raise ExpiredSession, "Global session cookie has expired"
         end
+
       else
         @signed          = {}
         @insecure        = {}

@@ -22,5 +22,9 @@ module HasGlobalSession
         @my_authority_name = basename[0...(basename.rindex('.'))] #chop trailing .ext
       end
     end
+
+    def invalidated_session?(uuid)
+      false
+    end
   end  
 end

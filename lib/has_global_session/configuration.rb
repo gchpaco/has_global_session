@@ -1,6 +1,4 @@
 module HasGlobalSession
-  class MissingConfiguration < Exception; end
-
   module Configuration
     mattr_accessor :config_file
     mattr_accessor :environment

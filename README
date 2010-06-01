@@ -1,4 +1,4 @@
-= Introduction =
+= Introduction
 
 HasGlobalSession enables multiple heterogeneous Web applications to share
 session state in a cryptographically secure way, facilitating single sign-on
@@ -6,27 +6,31 @@ and enabling easier development of large-scale distributed applications that
 make use of architectural strategies such as sharding or separation of concerns.
 
 This plugin does not provide a complete solution for authentication. In
-particular, it does _not_ provide any of the following:
- * federated identity (cross-domain single sign-on) -- use OpenID for that.
- * authentication -- the application's controllers must authenticate the user
-   (although they may store the authenticated user ID in the global session
-   in order to provide single sign-on).
- * data secrecy -- global session attributes can be signed but never encrypted;
-   protect against third-party snooping using SSL, and if you don't want your
-   users to see their session state, put it in the local session.
- * database replication -- the authentication authorities must have some way
-   to share information about the database of users, their passwords, etc.
- * single sign-out -- the authorities must have some way to broadcast a
-   notification when sessiona are invalidated, e.g. when a user signs out.
+particular, it does *not* provide any of the following:
 
-== Global Session Contents ==
+* <b>federation</b> -- aka cross-domain single sign-on -- use OpenID for that.
+
+* <b>authentication</b> -- the application's controllers must authenticate the user.
+
+* <b>secrecy</b> -- global session attributes can be signed but never encrypted;
+  protect against third-party snooping using SSL, and if you don't want your
+  users to see their session state, put it in a database.
+
+* <b>replication</b> -- the authentication authorities must have some way to
+  share information about the database of users, their passwords, etc.
+
+* <b>single sign-out</b> -- the authorities must have some way to broadcast a
+  notification when sessions are invalidated; they can override the default
+  Directory implementation to do realtime revocation checking.
+
+== Global Session Contents
 
 Global session state is stored as a cookie in the user's browser. The cookie
 is a Zlib-compressed JSON dictionary containing the following stuff:
- * session metadata (UUID, created-at, expires-at, certifying-authority)
- * signed session attributes (e.g. the authenticated user ID)
- * insecure session attributes (e.g. the last-visited URL)
- * a cryptographic signature of the metadata and signed attributes
+* session metadata (UUID, created-at, expires-at, certifying-authority)
+* signed session attributes (e.g. the authenticated user ID)
+* insecure session attributes (e.g. the last-visited URL)
+* a cryptographic signature of the metadata and signed attributes
 
 The global session is unserialized and its signature is verified whenever
 a controller asks for the global session. The cookie's value is updated
@@ -45,7 +49,7 @@ types can be stored in it: strings, numbers, lists, hashes and other Ruby
 primitives. Ruby booleans (true/false) do not translate well into JSON
 and should be avoided.
 
-= Example =
+= Example
 
 1) Create a basic config file and edit it to suit your needs:
       $ script/generate global_session_config mycoolapp.com
@@ -64,9 +68,9 @@ and should be avoided.
       ...
       @current_user = User.find(global_session['user'])
 
-= Detailed Information =
+= Detailed Information
 
-== Global Session Domain ==
+== Global Session Domain
 
 We refer to collection of _all_ Web application instances capable of using the
 global session as the "domain." The global session domain may consist of any
@@ -87,7 +91,7 @@ cookie's domain is "example.com". My app servers at app1.example.com and
 app2.example.com would be part of the global session domain, but my business
 partner's application at www.partner.com could not participate.
 
-== Authorities and Relying Parties ==
+== Authorities and Relying Parties
 
 A Web application that can create or update the global session is said to
 be an "authority" (because it's trusted by other parties to make assertions
@@ -111,11 +115,11 @@ is unlimited in both directions.
 
 Here are some reasons you might consider dividing your systems into different
 authorities:
- * beta/staging system vs. production system
- * system hosted by a third party vs. system hosted internally
- * e-commerce server vs. storefront server
+* beta/staging system vs. production system
+* system hosted by a third party vs. system hosted internally
+* e-commerce server vs. storefront server
 
-== The Directory ==
+== The Directory
 
 The Directory is a Ruby object instantiated by HasGlobalSession in order to
 perform lookups of public and private keys. Given an authority name (as found
@@ -138,10 +142,10 @@ contrast, *.pub files can be distributed freely.)
 If you wish all of the systems to stop trusting an authority, simply delete
 its public key from config/authorities.
 
-= To-Do =
+= To-Do
 
- * Renew session when it may be expiring soon
- * Configurable session expiry
- * Option for sticky global session (persists across browser restarts)
+* Configurable session expiry
+* Option to auto-renew session
+* Option for non-sticky global session (cookie expires at close of browser session, not at global session expiration!)
 
 Copyright (c) 2010 Tony Spataro <code@tracker.xeger.net>, released under the MIT license
