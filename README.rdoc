@@ -20,8 +20,8 @@ particular, it does not provide any of the following:
 
 * <b>secrecy</b> -- global session attributes can be signed but never encrypted;
   protect against third-party snooping using SSL. Group secrecy is expensive;
-  if you don't want your users to see their session state, put it in a database
-  in an encrypted local session store.
+  if you don't want your users to see their session state, put it in a database,
+  or in an encrypted local session cookie.
 
 * <b>replication</b> -- the authentication authorities must have some way to
   share information about the database of users in order to authenticate
@@ -34,21 +34,29 @@ particular, it does not provide any of the following:
 = Example
 
 1) Create a basic config file and edit it to suit your needs:
-      $ script/generate global_session_config mycoolapp.com
+    $ script/generate global_session_config mycoolapp.com
 
 2) Create an authentication authority:
-      $ script/generate global_session_authority mycoolapp
+    $ script/generate global_session_authority mycoolapp
 
-3) Declare that some or all of your application's controllers will have access
-   to the global session:
-      class ApplicationController < ActionController::Base
-        has_global_session
-      end
+3) Declare that some or all of your controllers will use the global session:
+    class ApplicationController < ActionController::Base
+      has_global_session
+    end
 
 4) Make use of the global session hash in your controllers:
-      global_session['user'] = @user.id
-      ...
-      @current_user = User.find(global_session['user'])
+    global_session['user'] = @user.id
+    ...
+    @current_user = User.find(global_session['user'])
+
+5) For easier programming, enable seamless integration with the local session:
+   (in global_session.yml)
+   common:
+     integrated: true
+   
+   (in your controllers)
+   session['user'] = @user.id #goes to the global session
+   session['local_thingie'] = @thingie.id #goes to the local session
 
 = Global Session Contents
 
