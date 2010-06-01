@@ -23,7 +23,26 @@ particular, it does *not* provide any of the following:
   notification when sessions are invalidated; they can override the default
   Directory implementation to do realtime revocation checking.
 
-== Global Session Contents
+= Example
+
+1) Create a basic config file and edit it to suit your needs:
+      $ script/generate global_session_config mycoolapp.com
+
+2) Create an authentication authority:
+      $ script/generate global_session_authority mycoolapp
+
+3) Declare that some or all of your application's controllers will have access
+   to the global session:
+      class ApplicationController < ActionController::Base
+        has_global_session
+      end
+
+4) Make use of the global session hash in your controllers:
+      global_session['user'] = @user.id
+      ...
+      @current_user = User.find(global_session['user'])
+
+= Global Session Contents
 
 Global session state is stored as a cookie in the user's browser. The cookie
 is a Zlib-compressed JSON dictionary containing the following stuff:
@@ -48,25 +67,6 @@ Since the session is serialized as JSON, only a limited range of object
 types can be stored in it: strings, numbers, lists, hashes and other Ruby
 primitives. Ruby booleans (true/false) do not translate well into JSON
 and should be avoided.
-
-= Example
-
-1) Create a basic config file and edit it to suit your needs:
-      $ script/generate global_session_config mycoolapp.com
-
-2) Create an authentication authority:
-      $ script/generate global_session_authority mycoolapp
-
-3) Declare that some or all of your application's controllers will have access
-   to the global session:
-      class ApplicationController < ActionController::Base
-        has_global_session
-      end
-
-4) Make use of the global session hash in your controllers:
-      global_session['user'] = @user.id
-      ...
-      @current_user = User.find(global_session['user'])
 
 = Detailed Information
 

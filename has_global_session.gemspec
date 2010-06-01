@@ -20,7 +20,7 @@ spec = Gem::Specification.new do |s|
   s.add_runtime_dependency('uuidtools', [">= 2.1.1"])
 
   basedir = File.dirname(__FILE__)
-  candidates = ['has_global_session.gemspec', 'init.rb', 'MIT-LICENSE', 'README'] +
+  candidates = ['has_global_session.gemspec', 'init.rb', 'MIT-LICENSE', 'README.rdoc'] +
             Dir['lib/**/*'] +
             Dir['rails/**/*']
   s.files = candidates.sort
