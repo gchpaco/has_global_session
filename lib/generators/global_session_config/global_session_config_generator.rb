@@ -10,7 +10,7 @@ class GlobalSessionConfigGenerator < Rails::Generator::Base
   def manifest
     record do |m|
       
-      m.template 'templates/global_session.yml.erb',
+      m.template 'global_session.yml.erb',
                  'config/global_session.yml',
                  :assigns=>{:app_name=>@app_name,
                             :app_domain=>@app_domain}

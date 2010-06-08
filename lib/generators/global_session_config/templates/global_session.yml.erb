@@ -13,16 +13,6 @@ common:
   # global attributes always taking precedence over local attributes.
   integrated: true
 
-# Development mode
-development:
-  timeout: 3600
-  cookie:
-    name: __<%= app_name %>_development
-    domain: localhost
-  trust:
-  - production
-  - development
-
 # Test/spec runs
 test:
   timeout: 900
@@ -31,6 +21,16 @@ test:
     domain: localhost
   trust:
   - test
+
+# Development mode
+development:
+  timeout: 3600
+  cookie:
+    name: __<%= app_name %>_development
+    domain: localhost
+  trust:
+  - development
+  - production
 
 # Production mode
 production:

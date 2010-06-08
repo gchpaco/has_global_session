@@ -14,6 +14,7 @@ class GlobalSessionAuthorityGenerator < Rails::Generator::Base
       new_private = new_key.to_pem
 
       dest_dir = File.join(RAILS_ROOT, 'config', 'authorities')
+      FileUtils.mkdir_p(dest_dir)
 
       File.open(File.join(dest_dir, @auth_name + ".pub"), 'w') do |f|
         f.puts new_public

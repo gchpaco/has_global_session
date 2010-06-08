@@ -4,23 +4,13 @@ module HasGlobalSession
     mattr_accessor :environment
     
     def self.[](key)
-      unless @config
-        raise MissingConfiguration, "config_file is nil; cannot read configuration" unless config_file
-        raise MissingConfiguration, "environment is nil; must be specified" unless environment
-        @config = YAML.load(File.read(config_file))
-        validate
-      end
-      if @config.has_key?(environment) && @config[environment].has_key?(key)
-        return @config[environment][key]
-      else
-        @config['common'][key]
-      end
+      get(key, true)
     end
 
     def self.validate
       ['attributes/signed', 'integrated', 'cookie/name', 'cookie/domain'].each do |path|
         elements = path.split '/'
-        object = self[elements.shift]
+        object = get(elements.shift, false)
         elements.each do |element|
           object = object[element]
           if object.nil?
@@ -28,6 +18,24 @@ module HasGlobalSession
             raise MissingConfiguration, msg
           end
         end
+      end
+    end
+
+    private
+    def self.get(key, validated)
+      unless @config
+        raise MissingConfiguration, "config_file is nil; cannot read configuration" unless config_file
+        raise MissingConfiguration, "environment is nil; must be specified" unless environment
+        @config = YAML.load(File.read(config_file))
+        raise TypeError, "#{config_file} must contain a Hash!" unless Hash === @config
+        validate if validated
+      end
+      if @config.has_key?(environment) &&
+         @config[environment].respond_to?(:has_key?) &&
+         @config[environment].has_key?(key)
+        return @config[environment][key]
+      else
+        @config['common'][key]
       end
     end
   end  

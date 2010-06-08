@@ -36,7 +36,9 @@ module HasGlobalSession
           raise SecurityError, "Signature mismatch on global session cookie; tampering suspected"
         end
 
-        unless Configuration['trust'].blank? || Configuration['trust'].include?(@authority)
+        unless Configuration['trust'].blank? ||
+               @authority = @directory.my_authority_name ||
+               Configuration['trust'].include?(@authority)
           raise SecurityError, "Global sessions created by #{@authority} are not trusted"
         end
 
@@ -47,15 +49,11 @@ module HasGlobalSession
       else
         @signed          = {}
         @insecure        = {}
-        @id              = UUIDTools::UUID.timestamp_create.to_s
+        @id              = UUID.timestamp_create.to_s
         @created_at      = Time.now.utc
         @authority       = @directory.my_authority_name
         renew!
       end
-    end
-
-    def supports_key?(key)
-      @schema_signed.include?(key) || @schema_insecure.include?(key)
     end
 
     def expired?
@@ -64,12 +62,12 @@ module HasGlobalSession
 
     def expire!
       @expires_at = Time.at(0)
-      @dirty_secure = true
+      @dirty = true
     end
 
     def renew!
       @expires_at = Configuration['timeout'].to_i.minutes.from_now.utc || 1.hours.from_now.utc        
-      @dirty_secure = true
+      @dirty = true
     end
 
     def to_s
@@ -77,7 +75,7 @@ module HasGlobalSession
               'tc'=>@created_at.to_i, 'te'=>@expires_at.to_i,
               'ds'=>@signed, 'dx'=>@insecure}
 
-      if @signature && !@dirty_secure
+      if @signature && !@dirty
         #use cached signature unless we've changed secure state
         authority = @authority
         signature = @signature
@@ -90,9 +88,13 @@ module HasGlobalSession
 
       hash['s'] = signature
       hash['a'] = authority
-      json = ActiveSupport::JSON.encode(hash)
+      json = hash.to_json #ActiveSupport::JSON.encode(hash) -- why does this expect Data sometimes?!
       zbin = Zlib::Deflate.deflate(json, Zlib::BEST_COMPRESSION)
       return Base64.encode64(zbin)
+    end
+
+    def supports_key?(key)
+      @schema_signed.include?(key) || @schema_insecure.include?(key)
     end
 
     def [](key)
@@ -100,11 +102,11 @@ module HasGlobalSession
     end
 
     def []=(key, value)
-      case key
+      case value
         when String, Numeric, Array
           #no-op
         else
-          raise TypeError, "Cannot store values of type #{key.class.name} reliably"
+          raise TypeError, "Cannot store values of type #{value.class.name} reliably"
       end
 
       if @schema_signed.include?(key)
@@ -113,7 +115,7 @@ module HasGlobalSession
         end
 
         @signed[key]  = value
-        @dirty_secure = true
+        @dirty = true
       elsif @schema_insecure.include?(key)
         @insecure[key] = value
       else
@@ -124,7 +126,7 @@ module HasGlobalSession
     def has_key?(key)
       @signed.has_key(key) || @insecure.has_key?(key)
     end
-    
+
     def keys
       @signed.keys + @insecure.keys
     end
