@@ -49,7 +49,15 @@ module HasGlobalSession
       else
         @signed          = {}
         @insecure        = {}
-        @id              = UUID.timestamp_create.to_s
+
+        if defined?(::UUIDTools) # UUIDTools v2
+          @id = ::UUIDTools.timestamp_create.to_s
+        elsif defined?(::UUID)   # UUIDTools v1
+          @id = UUID.timestamp_create.to_s
+        else
+          raise TypeError, "Neither UUIDTools nor UUID defined; unsupported UUIDTools version?"
+        end
+
         @created_at      = Time.now.utc
         @authority       = @directory.my_authority_name
         renew!
