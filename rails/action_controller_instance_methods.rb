@@ -50,5 +50,36 @@ module HasGlobalSession
         cookies[Configuration['cookie']['name']] = options
       end
     end
+
+    def log_processing
+      if logger && logger.info?
+        log_processing_for_request_id
+        log_processing_for_parameters
+      end
+    end
+
+    def log_processing_for_request_id()
+      if global_session && global_session.id
+        session_id = global_session.id + " (#{session[:session_id]})"
+      elsif session[:session_id]
+        session_id = session[:session_id]
+      elsif request.session_options[:id]
+        session_id = request.session_options[:id]
+      end
+
+      request_id = "\n\nProcessing #{self.class.name}\##{action_name} "
+      request_id << "to #{params[:format]} " if params[:format]
+      request_id << "(for #{request_origin.split[0]}) [#{request.method.to_s.upcase}]"
+      request_id << "\n  Session ID: #{session_id}" if session_id
+
+      logger.info(request_id)
+    end
+
+    def log_processing_for_parameters
+      parameters = respond_to?(:filter_parameters) ? filter_parameters(params) : params.dup
+      parameters = parameters.except!(:controller, :action, :format, :_method)
+
+      logger.info "  Parameters: #{parameters.inspect}" unless parameters.empty?
+    end
   end
 end

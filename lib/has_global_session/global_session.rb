@@ -36,6 +36,10 @@ module HasGlobalSession
           raise SecurityError, "Signature mismatch on global session cookie; tampering suspected"
         end
 
+        unless Configuration['trust'].blank? || Configuration['trust'].include?(@authority)
+          raise SecurityError, "Global sessions created by #{@authority} are not trusted"
+        end
+
         if expired? || @directory.invalidated_session?(@id)
           raise ExpiredSession, "Global session cookie has expired"
         end
@@ -45,9 +49,8 @@ module HasGlobalSession
         @insecure        = {}
         @id              = UUIDTools::UUID.timestamp_create.to_s
         @created_at      = Time.now.utc
-        @expires_at      = 2.hours.from_now.utc #TODO configurable
         @authority       = @directory.my_authority_name
-        @dirty_secure    = true
+        renew!
       end
     end
 
@@ -61,6 +64,11 @@ module HasGlobalSession
 
     def expire!
       @expires_at = Time.at(0)
+      @dirty_secure = true
+    end
+
+    def renew!
+      @expires_at = Configuration['timeout'].to_i.minutes.from_now.utc || 1.hours.from_now.utc        
       @dirty_secure = true
     end
 
@@ -92,6 +100,13 @@ module HasGlobalSession
     end
 
     def []=(key, value)
+      case key
+        when String, Numeric, Array
+          #no-op
+        else
+          raise TypeError, "Cannot store values of type #{key.class.name} reliably"
+      end
+
       if @schema_signed.include?(key)
         unless @directory.my_private_key && @directory.my_authority_name
           raise StandardError, 'Cannot change secure session attributes; we are not an authority'

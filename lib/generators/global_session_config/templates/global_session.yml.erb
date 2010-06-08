@@ -1,6 +1,5 @@
 # Common settings of the global session (that apply to all Rails environments)
-# are listed here. These may be overidden in the environment-specific section,
-# but it seldom makes sense to do so.
+# are listed here. These may be overidden in the environment-specific section.
 common:
   attributes:
     # Signed attributes of the global session
@@ -14,17 +13,30 @@ common:
   # global attributes always taking precedence over local attributes.
   integrated: true
 
+# Development mode
 development:
+  timeout: 3600
   cookie:
     name: __<%= app_name %>_development
     domain: localhost
+  trust:
+  - production
+  - development
 
+# Test/spec runs
 test:
+  timeout: 900
   cookie:
     name: __<%= app_name %>_test
     domain: localhost
+  trust:
+  - test
 
+# Production mode
 production:
+  timeout: 3600
   cookie:
     name: __<%= app_name %>_global
     domain: <%= app_domain %>
+  trust:
+  - production
