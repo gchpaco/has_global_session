@@ -3,28 +3,25 @@ module HasGlobalSession
     def global_session
       return @global_session if @global_session
 
+      if (klass = Configuration['directory'])
+        klass = klass.constantize
+      else
+        klass = Directory
+      end
+
+      directory = klass.new(File.join(RAILS_ROOT, 'config', 'authorities'))
+      cookie_name = Configuration['cookie']['name'] 
+      cookie      = cookies[cookie_name]
+
       begin
-        if (klass = Configuration['directory'])
-          klass = klass.constantize
-        else
-          klass = Directory
-        end
-
-        directory = klass.new(File.join(RAILS_ROOT, 'config', 'authorities'))
-        cookie = cookies[Configuration['cookie']['name']]
-
-        begin
-          #unserialize the global session from the cookie, or
-          #initialize a new global session if cookie == nil
-          @global_session = GlobalSession.new(directory, cookie)
-        rescue SessionExpired
-          #if the cookie is present but expired, silently
-          #initialize a new global session
-          @global_session = GlobalSession.new(directory)
-        end
+        #unserialize the global session from the cookie, or
+        #initialize a new global session if cookie == nil
+        @global_session = GlobalSession.new(directory, cookie)
       rescue Exception => e
-        cookies.delete Configuration['cookie']['name']
-        raise e
+        #silently recover from any error by initializing a new global session;
+        #the new session will be unauthenticated.
+        #TODO log the error
+        @global_session = GlobalSession.new(directory)
       end
     end
 
@@ -36,18 +33,16 @@ module HasGlobalSession
     end
 
     def global_session_update_cookie
-      if @global_session
-        if @global_session.expired?
-          options = {:value   => nil,
-                     :domain  => Configuration['cookie']['domain'],
-                     :expires => Time.at(0)}
-        else
-          options = {:value   => @global_session.to_s,
-                     :domain  => Configuration['cookie']['domain'],
-                     :expires => @global_session.expires_at}
-        end
+      return unless @global_session
 
-        cookies[Configuration['cookie']['name']] = options
+      cookie_name = Configuration['cookie']['name']
+      if @global_session.expired?
+        cookies.delete cookie_name
+      else
+        options = {:value   => @global_session.to_s,
+                   :domain  => Configuration['cookie']['domain'],
+                   :expires => @global_session.expires_at}
+        cookies[cookie_name] = options
       end
     end
 

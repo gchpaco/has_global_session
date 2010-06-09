@@ -18,7 +18,7 @@ module HasGlobalSession
         #User presented us with a cookie; let's decrypt and verify it
         zbin = Base64.decode64(cookie)
         json = Zlib::Inflate.inflate(zbin)
-        hash = ActiveSupport::JSON.decode(json)
+        hash = JSON.load(json)
         @id         = hash['id']
         @created_at = Time.at(hash['tc'].to_i)
         @expires_at = Time.at(hash['te'].to_i)
@@ -31,14 +31,13 @@ module HasGlobalSession
         expected = digest(hash)
         signer   = @directory.authorities[@authority]
         raise SecurityError, "Unknown signing authority #{@authority}" unless signer
+
         got      = signer.public_decrypt(Base64.decode64(@signature))
         unless (got == expected)
           raise SecurityError, "Signature mismatch on global session cookie; tampering suspected"
         end
 
-        unless Configuration['trust'].blank? ||
-               @authority = @directory.my_authority_name ||
-               Configuration['trust'].include?(@authority)
+        unless @directory.trusted_authority?(@authority)
           raise SecurityError, "Global sessions created by #{@authority} are not trusted"
         end
 
@@ -51,9 +50,9 @@ module HasGlobalSession
         @insecure        = {}
 
         if defined?(::UUIDTools) # UUIDTools v2
-          @id = ::UUIDTools.timestamp_create.to_s
+          @id = ::UUIDTools::UUID.timestamp_create.to_s
         elsif defined?(::UUID)   # UUIDTools v1
-          @id = UUID.timestamp_create.to_s
+          @id = ::UUID.timestamp_create.to_s
         else
           raise TypeError, "Neither UUIDTools nor UUID defined; unsupported UUIDTools version?"
         end
@@ -96,7 +95,7 @@ module HasGlobalSession
 
       hash['s'] = signature
       hash['a'] = authority
-      json = hash.to_json #ActiveSupport::JSON.encode(hash) -- why does this expect Data sometimes?!
+      json = hash.to_json
       zbin = Zlib::Deflate.deflate(json, Zlib::BEST_COMPRESSION)
       return Base64.encode64(zbin)
     end
@@ -151,21 +150,21 @@ module HasGlobalSession
     private
 
     def digest(input)
-      canonical = ActiveSupport::JSON.encode(canonicalize(input))
+      canonical = canonicalize(input).to_json
       return Digest::SHA1.new().update(canonical).hexdigest
     end
 
     def canonicalize(input)
       case input
         when Hash
-          output = ActiveSupport::OrderedHash.new
+          output = Array.new
           ordered_keys = input.keys.sort
           ordered_keys.each do |key|
-            output[canonicalize(key)] = canonicalize(input[key])
+            output << [ canonicalize(key), canonicalize(input[key]) ]
           end
         when Array
           output = input.collect { |x| canonicalize(x) }
-        when Numeric, String, ActiveSupport::OrderedHash
+        when Numeric, String
           output = input
         else
           raise TypeError, "Objects of type #{input.class.name} cannot be serialized in the global session"

@@ -23,6 +23,12 @@ module HasGlobalSession
       end
     end
 
+    def trusted_authority?(authority)
+      Configuration['trust'].blank? ||
+      authority == my_authority_name ||
+      Configuration['trust'].include?(authority)      
+    end
+
     def invalidated_session?(uuid)
       false
     end

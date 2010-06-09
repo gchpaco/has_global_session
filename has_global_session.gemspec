@@ -7,17 +7,18 @@ spec = Gem::Specification.new do |s|
   s.required_ruby_version = Gem::Requirement.new(">= 1.8.7")
 
   s.name    = 'has_global_session'
-  s.version = '0.8.1'
-  s.date    = '2010-06-01'
+  s.version = '0.8.2'
+  s.date    = '2010-06-09'
 
   s.authors = ['Tony Spataro']
   s.email   = 'code@tracker.xeger.net'
   s.homepage= 'http://github.com/xeger/has_global_session'
   
   s.summary = %q{Secure single-domain session sharing plugin for Rails.}
-  s.description = %q{This Rails plugin allows several Rails web apps that share the same back-end user database to share session state in a cryptographically secure way, facilitating single sign-on in a distributed web app. It only provides session sharing and does not concern itself with authentication or replication of the user database.}
+  s.description = %q{This plugin for Rails allows several web apps in an authentication domain to share session state, facilitating single sign-on in a distributed web app. It only provides session sharing and does not concern itself with authentication or replication of the user database.}
 
   s.add_runtime_dependency('uuidtools', [">= 1.0.7"])
+  s.add_runtime_dependency('json', [">= 1.1.7"])
 
   basedir = File.dirname(__FILE__)
   candidates = ['has_global_session.gemspec', 'init.rb', 'MIT-LICENSE', 'README.rdoc'] +
