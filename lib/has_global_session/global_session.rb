@@ -16,7 +16,7 @@ module HasGlobalSession
 
       if cookie
         load_from_cookie(cookie)
-      elsif @directory.my_authority_name
+      elsif @directory.local_authority_name
         create_from_scratch
       else
         create_invalid
@@ -42,10 +42,10 @@ module HasGlobalSession
         authority = @authority
         signature = @signature
       else
-        authority = @directory.my_authority_name
+        authority = @directory.local_authority_name
         hash['a'] = authority
         digest    = digest(hash)
-        signature = Base64.encode64(@directory.my_private_key.private_encrypt(digest))
+        signature = Base64.encode64(@directory.private_key.private_encrypt(digest))
       end
 
       hash['s'] = signature
@@ -116,7 +116,7 @@ module HasGlobalSession
     end
 
     def authority_check
-      unless @directory.my_authority_name
+      unless @directory.local_authority_name
         raise NoAuthority, 'Cannot change secure session attributes; we are not an authority'
       end      
     end
@@ -200,7 +200,7 @@ module HasGlobalSession
       @signed          = {}
       @insecure        = {}
       @created_at      = Time.now.utc
-      @authority       = @directory.my_authority_name
+      @authority       = @directory.local_authority_name
 
       if defined?(::UUIDTools) # UUIDTools v2
         @id = ::UUIDTools::UUID.timestamp_create.to_s

@@ -142,8 +142,8 @@ The Directory is a Ruby object instantiated by HasGlobalSession in order to
 perform lookups of public and private keys. Given an authority name (as found
 in a session cookie), the Directory can find the corresponding public key.
 
-If the local system is an authority itself, the method #my_authority_name will
-return non-nil and #my_private_key will return a private key suitable for
+If the local system is an authority itself, #local_authority_name will
+return non-nil and #private_key will return a private key suitable for
 signing session attributes.
 
 The Directory implementation included with HasGlobalSession uses the filesystem
@@ -177,14 +177,12 @@ class name of the directory under the 'common' section, like so:
 
 = To-Do
 
-* Explicit tracking of "which authority am I?" (Facilitate the "development-mode authority".)
-
 * Make more use of logging, ESPECIALLY when we can't raise exceptions due to cookie madness
 
 * Option to auto-renew session
 
-* Option for non-sticky global session
-  (e.g. cookie expires at close of browser session, not at global session
-  expiration!)
+* Explicit tracking of "which authority am I?" (Facilitate the "development-mode authority".)
+
+* Implement single sign-out via redirect
 
 Copyright (c) 2010 Tony Spataro <code@tracker.xeger.net>, released under the MIT license

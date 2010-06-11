@@ -34,16 +34,26 @@ module HasGlobalSession
 
     def global_session_update_cookie
       return unless @global_session
+      name   = Configuration['cookie']['name']
+      domain = Configuration['cookie']['domain']
 
-      cookie_name = Configuration['cookie']['name']
       if @global_session.valid?
+        if Configuration['ephemeral']
+          expiry = nil
+        else
+          expiry = @global_session.expires_at
+        end
+                 
         options = {:value   => @global_session.to_s,
-                   :domain  => Configuration['cookie']['domain'],
-                   :expires => @global_session.expires_at}
-        cookies[cookie_name] = options
+                   :domain  => domain,
+                   :expires => expiry}
       else
-        cookies.delete cookie_name
+        options = {:value   => nil,
+                   :domain  => domain,
+                   :expires => Time.at(0)}
       end
+
+      cookies[name] = options
     end
 
     def log_processing

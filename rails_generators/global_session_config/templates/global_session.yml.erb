@@ -12,12 +12,13 @@ common:
   # method #session to access both local AND global session state, with
   # global attributes always taking precedence over local attributes.
   integrated: true
-
+  ephemeral: false
+  
 # Test/spec runs
 test:
   timeout: 900
   cookie:
-    name: __<%= app_name %>_test
+    name: _session_gbl
     domain: localhost
   trust:
   - test
@@ -26,7 +27,7 @@ test:
 development:
   timeout: 3600
   cookie:
-    name: __<%= app_name %>_development
+    name: _session_gbl
     domain: localhost
   trust:
   - development
@@ -36,7 +37,7 @@ development:
 production:
   timeout: 3600
   cookie:
-    name: __<%= app_name %>_global
+    name: _session_gbl
     domain: <%= app_domain %>
   trust:
   - production
