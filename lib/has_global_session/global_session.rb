@@ -15,74 +15,29 @@ module HasGlobalSession
       @directory       = directory
 
       if cookie
-        #User presented us with a cookie; let's decrypt and verify it
-        zbin = Base64.decode64(cookie)
-        json = Zlib::Inflate.inflate(zbin)
-        hash = JSON.load(json)
-        @id         = hash['id']
-        @created_at = Time.at(hash['tc'].to_i)
-        @expires_at = Time.at(hash['te'].to_i)
-        @signed     = hash['ds']
-        @insecure   = hash['dx']
-        @signature  = hash['s']
-        @authority  = hash['a']
-
-        hash.delete('s')
-        expected = digest(hash)
-        signer   = @directory.authorities[@authority]
-        raise SecurityError, "Unknown signing authority #{@authority}" unless signer
-
-        got      = signer.public_decrypt(Base64.decode64(@signature))
-        unless (got == expected)
-          raise SecurityError, "Signature mismatch on global session cookie; tampering suspected"
-        end
-
-        unless @directory.trusted_authority?(@authority)
-          raise SecurityError, "Global sessions created by #{@authority} are not trusted"
-        end
-
-        if expired? || @directory.invalidated_session?(@id)
-          raise ExpiredSession, "Global session cookie has expired"
-        end
-
+        load_from_cookie(cookie)
+      elsif @directory.my_authority_name
+        create_from_scratch
       else
-        @signed          = {}
-        @insecure        = {}
-
-        if defined?(::UUIDTools) # UUIDTools v2
-          @id = ::UUIDTools::UUID.timestamp_create.to_s
-        elsif defined?(::UUID)   # UUIDTools v1
-          @id = ::UUID.timestamp_create.to_s
-        else
-          raise TypeError, "Neither UUIDTools nor UUID defined; unsupported UUIDTools version?"
-        end
-
-        @created_at      = Time.now.utc
-        @authority       = @directory.my_authority_name
-        renew!
+        create_invalid
       end
     end
 
-    def expired?
-      (@expires_at <= Time.now)
-    end
-
-    def expire!
-      @expires_at = Time.at(0)
-      @dirty = true
-    end
-
-    def renew!
-      @expires_at = Configuration['timeout'].to_i.minutes.from_now.utc || 1.hours.from_now.utc        
-      @dirty = true
+    def valid?
+      @id && (@expires_at > Time.now) && ! @directory.invalidated_session?(@id)
     end
 
     def to_s
+      if @cookie && !@dirty_insecure && !@dirty_secure
+        #use cached cookie if nothing has changed
+        return @cookie
+      end
+
       hash = {'id'=>@id,
               'tc'=>@created_at.to_i, 'te'=>@expires_at.to_i,
               'ds'=>@signed, 'dx'=>@insecure}
 
-      if @signature && !@dirty
+      if @signature && !@dirty_secure
         #use cached signature unless we've changed secure state
         authority = @authority
         signature = @signature
@@ -104,32 +59,6 @@ module HasGlobalSession
       @schema_signed.include?(key) || @schema_insecure.include?(key)
     end
 
-    def [](key)
-      @signed[key] || @insecure[key]
-    end
-
-    def []=(key, value)
-      case value
-        when String, Numeric, Array
-          #no-op
-        else
-          raise TypeError, "Cannot store values of type #{value.class.name} reliably"
-      end
-
-      if @schema_signed.include?(key)
-        unless @directory.my_private_key && @directory.my_authority_name
-          raise StandardError, 'Cannot change secure session attributes; we are not an authority'
-        end
-
-        @signed[key]  = value
-        @dirty = true
-      elsif @schema_insecure.include?(key)
-        @insecure[key] = value
-      else
-        raise ArgumentError, "Attribute '#{key}' is not specified in global session configuration"
-      end
-    end
-
     def has_key?(key)
       @signed.has_key(key) || @insecure.has_key?(key)
     end
@@ -147,10 +76,58 @@ module HasGlobalSession
       @insecure.each_pair(&block)
     end
 
+    def [](key)
+      @signed[key] || @insecure[key]
+    end
+
+    def []=(key, value)
+      raise InvalidSession unless valid?
+      #Ensure that the value is serializable (will raise if not)
+      canonicalize(value)
+
+      if @schema_signed.include?(key)
+        authority_check
+        @signed[key]  = value
+        @dirty_secure = true
+      elsif @schema_insecure.include?(key)
+        @insecure[key] = value
+        @dirty_insecure = true
+      else
+        raise ArgumentError, "Attribute '#{key}' is not specified in global session configuration"
+      end
+    end
+
+    def expire!
+      authority_check
+      @expires_at = Time.at(0)
+      @dirty_secure = true
+    end
+
+    def renew!
+      authority_check
+      @expires_at = Configuration['timeout'].to_i.minutes.from_now.utc || 1.hours.from_now.utc
+      @dirty_secure = true
+    end
+
     private
 
+    def logger
+      Configuration.logger
+    end
+
+    def authority_check
+      unless @directory.my_authority_name
+        raise NoAuthority, 'Cannot change secure session attributes; we are not an authority'
+      end      
+    end
+
     def digest(input)
-      canonical = canonicalize(input).to_json
+      begin
+        canonical = canonicalize(input).to_json
+      rescue UnserializableType => e
+        logger.error "Global session hash contains unserializable objects: #{input.inspect}"
+        raise e
+      end
       return Digest::SHA1.new().update(canonical).hexdigest
     end
 
@@ -164,13 +141,85 @@ module HasGlobalSession
           end
         when Array
           output = input.collect { |x| canonicalize(x) }
-        when Numeric, String
+        when Numeric, String, NilClass
           output = input
         else
-          raise TypeError, "Objects of type #{input.class.name} cannot be serialized in the global session"
+          raise UnserializableType, "Objects of type #{input.class.name} cannot be serialized in the global session"
       end
 
       return output
+    end
+
+    def load_from_cookie(cookie)
+      zbin = Base64.decode64(cookie)
+      json = Zlib::Inflate.inflate(zbin)
+      hash = JSON.load(json)
+
+      id         = hash['id']
+      created_at = Time.at(hash['tc'].to_i)
+      expires_at = Time.at(hash['te'].to_i)
+      signed     = hash['ds']
+      insecure   = hash['dx']
+      signature  = hash['s']
+      authority  = hash['a']
+
+      #Check signature
+      hash.delete('s')
+      expected = digest(hash)
+      signer   = @directory.authorities[authority]
+      raise SecurityError, "Unknown signing authority #{authority}" unless signer
+      got      = signer.public_decrypt(Base64.decode64(signature))
+      unless (got == expected)
+        raise SecurityError, "Signature mismatch on global session cookie; tampering suspected"
+      end
+
+      #Check trust in signing authority
+      unless @directory.trusted_authority?(authority)
+        raise SecurityError, "Global sessions created by #{authority} are not trusted"
+      end
+
+      #Check expiration
+      if expires_at <= Time.now || @directory.invalidated_session?(id)
+        raise ExpiredSession, "Global session cookie has expired"
+      end
+
+      #If all validation stuff passed, assign our instance variables.
+      @id         = id
+      @created_at = created_at
+      @expires_at = expires_at
+      @signed     = signed
+      @insecure   = insecure
+      @authority  = authority
+      @signature  = signature
+      @cookie     = cookie
+    end
+
+    def create_from_scratch
+      authority_check
+
+      @signed          = {}
+      @insecure        = {}
+      @created_at      = Time.now.utc
+      @authority       = @directory.my_authority_name
+
+      if defined?(::UUIDTools) # UUIDTools v2
+        @id = ::UUIDTools::UUID.timestamp_create.to_s
+      elsif defined?(::UUID)   # UUIDTools v1
+        @id = ::UUID.timestamp_create.to_s
+      else
+        raise TypeError, "Neither UUIDTools nor UUID defined; unsupported UUIDTools version?"
+      end
+
+      renew!
+    end
+
+    def create_invalid
+      @id         = nil
+      @created_at = Time.now
+      @expires_at = created_at
+      @signed     = {}
+      @insecure   = {}
+      @authority  = nil
     end
   end  
 end

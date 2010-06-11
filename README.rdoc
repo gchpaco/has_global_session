@@ -177,7 +177,9 @@ class name of the directory under the 'common' section, like so:
 
 = To-Do
 
-* Configurable session expiry
+* Explicit tracking of "which authority am I?" (Facilitate the "development-mode authority".)
+
+* Make more use of logging, ESPECIALLY when we can't raise exceptions due to cookie madness
 
 * Option to auto-renew session
 

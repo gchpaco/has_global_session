@@ -1,6 +1,8 @@
 module HasGlobalSession
   class MissingConfiguration < Exception; end
-  class SessionExpired < Exception; end  
+  class InvalidSession < Exception; end
+  class UnserializableType < Exception; end
+  class NoAuthority < Exception; end
 end
 
 basedir = File.dirname(__FILE__)

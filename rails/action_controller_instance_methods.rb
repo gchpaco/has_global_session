@@ -36,13 +36,13 @@ module HasGlobalSession
       return unless @global_session
 
       cookie_name = Configuration['cookie']['name']
-      if @global_session.expired?
-        cookies.delete cookie_name
-      else
+      if @global_session.valid?
         options = {:value   => @global_session.to_s,
                    :domain  => Configuration['cookie']['domain'],
                    :expires => @global_session.expires_at}
         cookies[cookie_name] = options
+      else
+        cookies.delete cookie_name
       end
     end
 
