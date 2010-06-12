@@ -134,7 +134,7 @@ Here are some reasons you might consider dividing your systems into different
 authorities:
 * beta/staging system vs. production system
 * system hosted by a third party vs. system hosted internally
-* e-commerce node vs. storefront node
+* e-commerce node vs. storefront node vs. admin node
 
 == The Directory
 
@@ -171,17 +171,14 @@ To replace or enhance the built-in Directory, simply create a new class that
 extends Directory and put the class somewhere in your app (the lib directory
 is a good choice). In the HasGlobalSession configuration file, specify the
 class name of the directory under the 'common' section, like so:
+
   common:
     integrated: true
     directory: MyCoolDirectory
 
 = To-Do
 
-* Make more use of logging, ESPECIALLY when we can't raise exceptions due to cookie madness
-
 * Option to auto-renew session
-
-* Explicit tracking of "which authority am I?" (Facilitate the "development-mode authority".)
 
 * Implement single sign-out via redirect
 

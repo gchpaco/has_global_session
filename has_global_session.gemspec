@@ -7,8 +7,8 @@ spec = Gem::Specification.new do |s|
   s.required_ruby_version = Gem::Requirement.new(">= 1.8.7")
 
   s.name    = 'has_global_session'
-  s.version = '0.8.2'
-  s.date    = '2010-06-09'
+  s.version = '0.8.3'
+  s.date    = '2010-06-11'
 
   s.authors = ['Tony Spataro']
   s.email   = 'code@tracker.xeger.net'

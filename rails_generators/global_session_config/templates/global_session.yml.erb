@@ -16,28 +16,33 @@ common:
   
 # Test/spec runs
 test:
-  timeout: 900
+  timeout: 15 #minutes
   cookie:
     name: _session_gbl
     domain: localhost
+  #the name of the local authority (optional)
+  authority: test
+  #which authorities this app will trust
   trust:
   - test
 
 # Development mode
 development:
-  timeout: 3600
+  timeout: 60
   cookie:
     name: _session_gbl
     domain: localhost
+  authority: development
   trust:
   - development
   - production
 
 # Production mode
 production:
-  timeout: 3600
+  timeout: 60
   cookie:
     name: _session_gbl
     domain: <%= app_domain %>
+  authority: production
   trust:
   - production

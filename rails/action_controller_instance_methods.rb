@@ -20,7 +20,8 @@ module HasGlobalSession
       rescue Exception => e
         #silently recover from any error by initializing a new global session;
         #the new session will be unauthenticated.
-        #TODO log the error
+        directory.report_exception(e, cookie)
+        logger.error "#{e.class.name}: #{e.message} (at #{e.backtrace[0]})" if logger
         @global_session = GlobalSession.new(directory)
       end
     end
@@ -37,23 +38,22 @@ module HasGlobalSession
       name   = Configuration['cookie']['name']
       domain = Configuration['cookie']['domain']
 
+      #Default options for invalid session
+      options = {:value   => nil,
+                 :domain  => domain,
+                 :expires => Time.at(0)}
+
       if @global_session.valid?
-        if Configuration['ephemeral']
-          expiry = nil
-        else
-          expiry = @global_session.expires_at
+        begin
+          value   = @global_session.to_s 
+          expires = Configuration['ephemeral'] ? nil : @global_session.expires_at          
+          options.merge!(:value => value, :expires => expires)
+        rescue Exception => e
+          logger.error "#{e.class.name}: #{e.message} (at #{e.backtrace[0]})" if logger
         end
-                 
-        options = {:value   => @global_session.to_s,
-                   :domain  => domain,
-                   :expires => expiry}
-      else
-        options = {:value   => nil,
-                   :domain  => domain,
-                   :expires => Time.at(0)}
       end
 
-      cookies[name] = options
+      cookies[name] = options unless (cookies[name] == options[:value])
     end
 
     def log_processing

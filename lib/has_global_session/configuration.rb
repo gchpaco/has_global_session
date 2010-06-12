@@ -2,7 +2,6 @@ module HasGlobalSession
   module Configuration
     mattr_accessor :config_file
     mattr_accessor :environment
-    mattr_accessor :logger
     
     def self.[](key)
       get(key, true)

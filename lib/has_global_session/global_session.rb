@@ -35,24 +35,27 @@ module HasGlobalSession
 
       hash = {'id'=>@id,
               'tc'=>@created_at.to_i, 'te'=>@expires_at.to_i,
-              'ds'=>@signed, 'dx'=>@insecure}
+              'ds'=>@signed}
 
       if @signature && !@dirty_secure
         #use cached signature unless we've changed secure state
         authority = @authority
         signature = @signature
       else
+        authority_check
         authority = @directory.local_authority_name
         hash['a'] = authority
         digest    = digest(hash)
-        signature = Base64.encode64(@directory.private_key.private_encrypt(digest))
+        signature = Encoding::Base64.dump(@directory.private_key.private_encrypt(digest))
       end
 
-      hash['s'] = signature
-      hash['a'] = authority
-      json = hash.to_json
+      hash['dx'] = @insecure
+      hash['s']  = signature
+      hash['a']  = authority
+      
+      json = Encoding::JSON.dump(hash)
       zbin = Zlib::Deflate.deflate(json, Zlib::BEST_COMPRESSION)
-      return Base64.encode64(zbin)
+      return Encoding::Base64.dump(zbin)
     end
 
     def supports_key?(key)
@@ -82,6 +85,7 @@ module HasGlobalSession
 
     def []=(key, value)
       raise InvalidSession unless valid?
+
       #Ensure that the value is serializable (will raise if not)
       canonicalize(value)
 
@@ -111,10 +115,6 @@ module HasGlobalSession
 
     private
 
-    def logger
-      Configuration.logger
-    end
-
     def authority_check
       unless @directory.local_authority_name
         raise NoAuthority, 'Cannot change secure session attributes; we are not an authority'
@@ -122,12 +122,7 @@ module HasGlobalSession
     end
 
     def digest(input)
-      begin
-        canonical = canonicalize(input).to_json
-      rescue UnserializableType => e
-        logger.error "Global session hash contains unserializable objects: #{input.inspect}"
-        raise e
-      end
+      canonical = Encoding::JSON.dump(canonicalize(input))
       return Digest::SHA1.new().update(canonical).hexdigest
     end
 
@@ -151,24 +146,23 @@ module HasGlobalSession
     end
 
     def load_from_cookie(cookie)
-      zbin = Base64.decode64(cookie)
+      zbin = Encoding::Base64.load(cookie)
       json = Zlib::Inflate.inflate(zbin)
-      hash = JSON.load(json)
+      hash = Encoding::JSON.load(json)
 
       id         = hash['id']
+      authority  = hash['a']
       created_at = Time.at(hash['tc'].to_i)
       expires_at = Time.at(hash['te'].to_i)
       signed     = hash['ds']
-      insecure   = hash['dx']
-      signature  = hash['s']
-      authority  = hash['a']
+      insecure   = hash.delete('dx')
+      signature  = hash.delete('s')
 
       #Check signature
-      hash.delete('s')
       expected = digest(hash)
       signer   = @directory.authorities[authority]
       raise SecurityError, "Unknown signing authority #{authority}" unless signer
-      got      = signer.public_decrypt(Base64.decode64(signature))
+      got      = signer.public_decrypt(Encoding::Base64.load(signature))
       unless (got == expected)
         raise SecurityError, "Signature mismatch on global session cookie; tampering suspected"
       end
@@ -185,11 +179,11 @@ module HasGlobalSession
 
       #If all validation stuff passed, assign our instance variables.
       @id         = id
+      @authority  = authority
       @created_at = created_at
       @expires_at = expires_at
       @signed     = signed
       @insecure   = insecure
-      @authority  = authority
       @signature  = signature
       @cookie     = cookie
     end

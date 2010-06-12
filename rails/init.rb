@@ -8,7 +8,6 @@ if File.exist?(config_file)
   # and operating environment.
   HasGlobalSession::Configuration.config_file = config_file
   HasGlobalSession::Configuration.environment = RAILS_ENV
-  HasGlobalSession::Configuration.logger      = RAILS_DEFAULT_LOGGER
   
   require File.join(basedir, 'rails', 'action_controller_instance_methods')
 

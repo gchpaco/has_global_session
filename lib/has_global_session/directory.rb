@@ -5,21 +5,22 @@ module HasGlobalSession
     def initialize(keystore_directory)
       certs = Dir[File.join(keystore_directory, '*.pub')]
       keys  = Dir[File.join(keystore_directory, '*.key')]
+      raise ConfigurationError, "Excepted 0 or 1 key files, found #{keys.size}" unless [0, 1].include?(keys.size)
 
       @authorities = {}
       certs.each do |cert_file|
         basename = File.basename(cert_file)
         authority = basename[0...(basename.rindex('.'))] #chop trailing .ext
         @authorities[authority] = OpenSSL::PKey::RSA.new(File.read(cert_file))
-        raise TypeError, "Expected #{basename} to contain an RSA public key" unless @authorities[authority].public?
+        raise ConfigurationError, "Expected #{basename} to contain an RSA public key" unless @authorities[authority].public?
       end
 
-      raise ArgumentError, "Excepted 0 or 1 key files, found #{keys.size}" if ![0, 1].include?(keys.size)
-      if (key_file = keys[0])
-        basename = File.basename(key_file)
+      if (authority_name = Configuration['authority'])
+        key_file = keys.detect { |kf| kf =~ /#{authority_name}.key$/ }
+        raise ConfigurationError, "Key file #{authority_name}.key not found" unless key_file        
         @private_key  = OpenSSL::PKey::RSA.new(File.read(key_file))
-        raise TypeError, "Expected #{basename} to contain an RSA private key" unless @private_key.private?
-        @local_authority_name = basename[0...(basename.rindex('.'))] #chop trailing .ext
+        raise ConfigurationError, "Expected #{basename} to contain an RSA private key" unless @private_key.private?
+        @local_authority_name = authority_name
       end
     end
 
@@ -29,6 +30,10 @@ module HasGlobalSession
 
     def invalidated_session?(uuid)
       false
+    end
+
+    def report_exception(exception, cookie=nil)
+      true
     end
   end  
 end

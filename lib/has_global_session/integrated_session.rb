@@ -40,5 +40,15 @@ module HasGlobalSession
       @global_session.each_pair(&block)
       @local_session.each_pair(&block)
     end
+
+    def method_missing(meth, *args)
+      if @global_session.respond_to?(meth)
+        return @global_session.send(meth, *args)
+      elsif @local_session.respond_to?(meth)
+        return @local_session.send(meth, *args)
+      else
+        super
+      end
+    end
   end
 end
