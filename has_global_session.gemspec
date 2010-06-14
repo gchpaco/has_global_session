@@ -19,6 +19,10 @@ spec = Gem::Specification.new do |s|
 
   s.add_runtime_dependency('uuidtools', [">= 1.0.7"])
   s.add_runtime_dependency('json', [">= 1.1.7"])
+  s.add_runtime_dependency('activesupport', [">= 2.1.2"])
+
+  s.add_development_dependency('rspec', [">= 1.3.0"])
+  s.add_development_dependency('flexmock', [">= 0.8.6"])
 
   basedir = File.dirname(__FILE__)
   candidates = ['has_global_session.gemspec', 'init.rb', 'MIT-LICENSE', 'README.rdoc'] +

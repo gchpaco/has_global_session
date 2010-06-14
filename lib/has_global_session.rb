@@ -6,6 +6,12 @@ module HasGlobalSession
   class NoAuthority < Exception; end
 end
 
+#Make sure gem dependencies are activated.
+require 'uuidtools'
+require 'json'
+require 'active_support'
+
+#Require our own sources
 basedir = File.dirname(__FILE__)
 require File.join(basedir, 'has_global_session', 'configuration')
 require File.join(basedir, 'has_global_session', 'directory')

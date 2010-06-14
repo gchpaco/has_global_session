@@ -1,23 +1,23 @@
 require File.expand_path(File.join(File.dirname(__FILE__), '..' , 'spec_helper'))
 
+require 'tempfile'
+
+include HasGlobalSession
+
 describe HasGlobalSession::Directory do
+
   before(:each) do
-    @keystore_dir = File.join( Dir.tmpdir, "#{File.basename(__FILE__)}_#{Process.pid}_#{rand(2**32)}" )
-    FileUtils.mkdir_p(@keystore_dir)
+    @keystore = Keystore.new
   end
-
+  
   after(:each) do
-    FileUtils.rm_rf(@keystore_dir)
+    @keystore.reset
   end
 
-  def create_keypair(name, write_private)
-    new_key     = OpenSSL::PKey::RSA.generate( 256 )
-    new_public  = new_key.public_key.to_pem
-    new_private = new_key.to_pem
-    File.open(File.join(@keystore_dir, "#{name}.pub")) { |f| f.puts new_public }
-    File.open(File.join(@keystore_dir, "#{name}.key")) { |f| f.puts new_key }
+  after(:all) do
+    @keystore.destroy
   end
-
+  
   describe :initialize do
     context 'when a local authority is configured' do
       before(:each) do
@@ -26,25 +26,39 @@ describe HasGlobalSession::Directory do
       end
 
       context 'and keystore contains no private keys' do
-        create_keypair(@authority_name, true, false)
-        Directory.new(@keystore_dir).should_raise(ConfigurationError)
+        it 'should raise an error' do
+          @keystore.create(@authority_name, false)
+          lambda {
+            Directory.new(@keystore.dir)
+          }.should raise_error(ConfigurationError)
+        end
       end
 
       context 'and keystore contains an incorrectly-named private key' do
-        create_keypair('wrong_name', true, true)
-        Directory.new(@keystore_dir).should_raise(ConfigurationError)
+        it 'should raise an error' do
+          @keystore.create('wrong_name', true)
+          lambda {
+            Directory.new(@keystore.dir)
+          }.should raise_error(ConfigurationError)
+        end
       end
 
       context 'and keystore contains two private keys' do
-        create_keypair(@authority_name, true, true)
-        create_keypair('wrong_name', true, true)
-        Directory.new(@keystore_dir).should_raise(ConfigurationError)
+        it 'should raise an error' do
+          @keystore.create(@authority_name, true)
+          @keystore.create('wrong_name', true)
 
+          lambda {
+            Directory.new(@keystore.dir)
+          }.should raise_error(ConfigurationError)
+        end
       end
 
       context 'and keystore contains a correctly-named private key' do
-        create_keypair(@authority_name, true, true)
-        Directory.new(@keystore_dir).should_raise(ConfigurationError).should_return(Directory)
+        it 'should succeed' do
+          @keystore.create(@authority_name, true)
+          Directory.should === Directory.new(@keystore.dir)
+        end
       end
     end
   end
