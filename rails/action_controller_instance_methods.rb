@@ -46,7 +46,7 @@ module HasGlobalSession
       if @global_session.valid?
         begin
           value   = @global_session.to_s 
-          expires = Configuration['ephemeral'] ? nil : @global_session.expires_at          
+          expires = Configuration['ephemeral'] ? nil : @global_session.expired_at          
           options.merge!(:value => value, :expires => expires)
         rescue Exception => e
           logger.error "#{e.class.name}: #{e.message} (at #{e.backtrace[0]})" if logger

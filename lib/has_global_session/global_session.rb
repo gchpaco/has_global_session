@@ -7,7 +7,7 @@ require 'uuidtools'
 
 module HasGlobalSession 
   class GlobalSession
-    attr_reader :id, :authority, :created_at, :expires_at
+    attr_reader :id, :authority, :created_at, :expired_at
 
     def initialize(directory, cookie=nil)
       @schema_signed   = Set.new((Configuration['attributes']['signed'] rescue []))
@@ -24,7 +24,7 @@ module HasGlobalSession
     end
 
     def valid?
-      @id && (@expires_at > Time.now) && ! @directory.invalidated_session?(@id)
+      @id && (@expired_at > Time.now) && ! @directory.invalidated_session?(@id)
     end
 
     def to_s
@@ -34,7 +34,7 @@ module HasGlobalSession
       end
 
       hash = {'id'=>@id,
-              'tc'=>@created_at.to_i, 'te'=>@expires_at.to_i,
+              'tc'=>@created_at.to_i, 'te'=>@expired_at.to_i,
               'ds'=>@signed}
 
       if @signature && !@dirty_secure
@@ -103,13 +103,14 @@ module HasGlobalSession
 
     def expire!
       authority_check
-      @expires_at = Time.at(0)
+      @expired_at = Time.at(0)
       @dirty_secure = true
+      @directory.report_expired_session(@id, @expired_at)
     end
 
     def renew!
       authority_check
-      @expires_at = Configuration['timeout'].to_i.minutes.from_now.utc || 1.hours.from_now.utc
+      @expired_at = Configuration['timeout'].to_i.minutes.from_now.utc || 1.hours.from_now.utc
       @dirty_secure = true
     end
 
@@ -153,7 +154,7 @@ module HasGlobalSession
       id         = hash['id']
       authority  = hash['a']
       created_at = Time.at(hash['tc'].to_i)
-      expires_at = Time.at(hash['te'].to_i)
+      expired_at = Time.at(hash['te'].to_i)
       signed     = hash['ds']
       insecure   = hash.delete('dx')
       signature  = hash.delete('s')
@@ -173,7 +174,7 @@ module HasGlobalSession
       end
 
       #Check expiration
-      if expires_at <= Time.now || @directory.invalidated_session?(id)
+      if expired_at <= Time.now || @directory.invalidated_session?(id)
         raise ExpiredSession, "Global session cookie has expired"
       end
 
@@ -181,7 +182,7 @@ module HasGlobalSession
       @id         = id
       @authority  = authority
       @created_at = created_at
-      @expires_at = expires_at
+      @expired_at = expired_at
       @signed     = signed
       @insecure   = insecure
       @signature  = signature
@@ -210,7 +211,7 @@ module HasGlobalSession
     def create_invalid
       @id         = nil
       @created_at = Time.now
-      @expires_at = created_at
+      @expired_at = created_at
       @signed     = {}
       @insecure   = {}
       @authority  = nil
