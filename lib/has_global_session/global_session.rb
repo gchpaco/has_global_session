@@ -24,7 +24,7 @@ module HasGlobalSession
     end
 
     def valid?
-      @id && (@expired_at > Time.now) && ! @directory.invalidated_session?(@id)
+      @directory.valid_session?(@id, @expired_at)
     end
 
     def to_s
@@ -101,11 +101,8 @@ module HasGlobalSession
       end
     end
 
-    def expire!
-      authority_check
-      @expired_at = Time.at(0)
-      @dirty_secure = true
-      @directory.report_expired_session(@id, @expired_at)
+    def invalidate!
+      @directory.report_invalid_session(@id, @expired_at)
     end
 
     def renew!
@@ -174,8 +171,8 @@ module HasGlobalSession
       end
 
       #Check expiration
-      if expired_at <= Time.now || @directory.invalidated_session?(id)
-        raise ExpiredSession, "Global session cookie has expired"
+      unless @directory.valid_session?(id)
+        raise InvalidSession, "Global session has expired or been invalidated"
       end
 
       #If all validation stuff passed, assign our instance variables.

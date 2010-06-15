@@ -28,11 +28,11 @@ module HasGlobalSession
       Configuration['trust'].include?(authority)
     end
 
-    def invalidated_session?(uuid, expired_at)
-      expired_at <= Time.now
+    def valid_session?(uuid, expired_at)
+      expired_at > Time.now
     end
 
-    def report_expired_session(uuid, expired_at)
+    def report_invalid_session(uuid, expired_at)
       true
     end
     
