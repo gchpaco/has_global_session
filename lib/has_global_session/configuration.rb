@@ -12,7 +12,7 @@ module HasGlobalSession
         elements = path.split '/'
         object = get(elements.shift, false)
         elements.each do |element|
-          object = object[element]
+          object = object[element] if object
           if object.nil?
             msg = "#{File.basename(config_file)} does not specify required element #{elements.map { |x| "['#{x}']"}.join('')}"
             raise MissingConfiguration, msg

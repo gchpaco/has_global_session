@@ -167,11 +167,11 @@ module HasGlobalSession
 
       #Check trust in signing authority
       unless @directory.trusted_authority?(authority)
-        raise SecurityError, "Global sessions created by #{authority} are not trusted"
+        raise SecurityError, "Global sessions signed by #{authority} are not trusted"
       end
 
       #Check expiration
-      unless @directory.valid_session?(id)
+      unless @directory.valid_session?(id, expired_at)
         raise InvalidSession, "Global session has expired or been invalidated"
       end
 

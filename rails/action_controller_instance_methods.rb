@@ -21,7 +21,6 @@ module HasGlobalSession
         #silently recover from any error by initializing a new global session;
         #the new session will be unauthenticated.
         directory.report_exception(e, cookie)
-        logger.error "#{e.class.name}: #{e.message} (at #{e.backtrace[0]})" if logger
         @global_session = GlobalSession.new(directory)
       end
     end

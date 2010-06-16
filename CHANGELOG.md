@@ -1,3 +1,8 @@
+= 0.8.5 (2010-06-16)
+
+* Bug fix in GlobalSession (calling Directory method with wrong number of params)
+* Undo some stupid decisions made in 0.8.4
+
 = 0.8.4 (2010-06-15)
 
 * Change #expires_at to #expired_at
