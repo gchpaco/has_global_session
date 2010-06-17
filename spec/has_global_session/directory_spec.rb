@@ -1,32 +1,32 @@
 require File.expand_path(File.join(File.dirname(__FILE__), '..' , 'spec_helper'))
 
-require 'tempfile'
-
 include HasGlobalSession
 
-describe HasGlobalSession::Directory do
+describe Directory do
+  include SpecHelper
 
-  before(:each) do
-    @keystore = Keystore.new
-  end
-  
-  after(:each) do
-    @keystore.reset
+  before(:all) do
+    @keystore = KeyFactory.new
   end
 
   after(:all) do
     @keystore.destroy
+  end  
+
+  after(:each) do
+    @keystore.reset
+    reset_mock_config
   end
-  
+
   describe :initialize do
     context 'when a local authority is configured' do
       before(:each) do
         @authority_name = "authority#{rand(2**16)}"
-        flexmock(Configuration).should_receive(:[]).with('authority').and_return(@authority_name)
+        mock_config('test/authority', @authority_name)
       end
 
       context 'and keystore contains no private keys' do
-        it 'should raise an error' do
+        it 'should raise ConfigurationError' do
           @keystore.create(@authority_name, false)
           lambda {
             Directory.new(@keystore.dir)
@@ -35,7 +35,7 @@ describe HasGlobalSession::Directory do
       end
 
       context 'and keystore contains an incorrectly-named private key' do
-        it 'should raise an error' do
+        it 'should raise ConfigurationError' do
           @keystore.create('wrong_name', true)
           lambda {
             Directory.new(@keystore.dir)
@@ -44,7 +44,7 @@ describe HasGlobalSession::Directory do
       end
 
       context 'and keystore contains two private keys' do
-        it 'should raise an error' do
+        it 'should raise ConfigurationError' do
           @keystore.create(@authority_name, true)
           @keystore.create('wrong_name', true)
 

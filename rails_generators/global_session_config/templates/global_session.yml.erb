@@ -17,6 +17,7 @@ common:
 # Test/spec runs
 test:
   timeout: 15 #minutes
+  renew: 5 #minutes before expiration
   cookie:
     name: _session_gbl
     domain: localhost
@@ -29,6 +30,7 @@ test:
 # Development mode
 development:
   timeout: 60
+  renew: 15
   cookie:
     name: _session_gbl
     domain: localhost
@@ -40,6 +42,7 @@ development:
 # Production mode
 production:
   timeout: 60
+  renew: 15
   cookie:
     name: _session_gbl
     domain: <%= app_domain %>

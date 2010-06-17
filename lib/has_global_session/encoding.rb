@@ -20,7 +20,7 @@ module HasGlobalSession
     # and Filename Safe Alphabet," described in RFC4648, with the exception that
     # this scheme preserves the '=' padding characters due to limitations of
     # Ruby's built-in base64 encoding routines.
-    class Base64
+    class Base64Cookie
       def self.load(string)
         tr = string.tr('-_', '+/')
         return tr.unpack('m')[0]

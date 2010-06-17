@@ -1,14 +1,17 @@
 module HasGlobalSession
   module Configuration
-    mattr_accessor :config_file
-    mattr_accessor :environment
-    
+    def self.environment; @environment; end
+    def self.environment=(value); @environment = value; end
+
+    def self.config_file; @config_file; end
+    def self.config_file=(value); @config_file= value; end
+
     def self.[](key)
       get(key, true)
     end
 
     def self.validate
-      ['attributes/signed', 'integrated', 'cookie/name', 'cookie/domain'].each do |path|
+      ['attributes/signed', 'integrated', 'cookie/name', 'cookie/domain', 'timeout'].each do |path|
         elements = path.split '/'
         object = get(elements.shift, false)
         elements.each do |element|
@@ -31,12 +34,13 @@ module HasGlobalSession
         validate if validated
       end
       if @config.has_key?(environment) &&
-         @config[environment].respond_to?(:has_key?) &&
          @config[environment].has_key?(key)
         return @config[environment][key]
       else
         @config['common'][key]
       end
+    rescue NoMethodError
+      raise MissingConfiguration, "Configuration key '#{key}' not found"
     end
   end  
 end

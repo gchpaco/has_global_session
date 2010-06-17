@@ -1,3 +1,8 @@
+= 0.8.5 (2010-06-17)
+
+* Add auto-renew of sessions that are going to expire soon
+* Add some test coverage (but not very extensive!) for GlobalSession
+
 = 0.8.5 (2010-06-16)
 
 * Bug fix in GlobalSession (calling Directory method with wrong number of params)

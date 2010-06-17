@@ -10,8 +10,8 @@ module HasGlobalSession
     attr_reader :id, :authority, :created_at, :expired_at
 
     def initialize(directory, cookie=nil)
-      @schema_signed   = Set.new((Configuration['attributes']['signed'] rescue []))
-      @schema_insecure = Set.new((Configuration['attributes']['insecure'] rescue []))
+      @schema_signed   = Set.new((Configuration['attributes']['signed']))
+      @schema_insecure = Set.new((Configuration['attributes']['insecure']))
       @directory       = directory
 
       if cookie
@@ -46,7 +46,7 @@ module HasGlobalSession
         authority = @directory.local_authority_name
         hash['a'] = authority
         digest    = digest(hash)
-        signature = Encoding::Base64.dump(@directory.private_key.private_encrypt(digest))
+        signature = Encoding::Base64Cookie.dump(@directory.private_key.private_encrypt(digest))
       end
 
       hash['dx'] = @insecure
@@ -55,7 +55,7 @@ module HasGlobalSession
       
       json = Encoding::JSON.dump(hash)
       zbin = Zlib::Deflate.deflate(json, Zlib::BEST_COMPRESSION)
-      return Encoding::Base64.dump(zbin)
+      return Encoding::Base64Cookie.dump(zbin)
     end
 
     def supports_key?(key)
@@ -107,7 +107,7 @@ module HasGlobalSession
 
     def renew!
       authority_check
-      @expired_at = Configuration['timeout'].to_i.minutes.from_now.utc || 1.hours.from_now.utc
+      @expired_at = Configuration['timeout'].to_i.minutes.from_now.utc
       @dirty_secure = true
     end
 
@@ -144,14 +144,14 @@ module HasGlobalSession
     end
 
     def load_from_cookie(cookie)
-      zbin = Encoding::Base64.load(cookie)
+      zbin = Encoding::Base64Cookie.load(cookie)
       json = Zlib::Inflate.inflate(zbin)
       hash = Encoding::JSON.load(json)
 
       id         = hash['id']
       authority  = hash['a']
-      created_at = Time.at(hash['tc'].to_i)
-      expired_at = Time.at(hash['te'].to_i)
+      created_at = Time.at(hash['tc'].to_i).utc
+      expired_at = Time.at(hash['te'].to_i).utc
       signed     = hash['ds']
       insecure   = hash.delete('dx')
       signature  = hash.delete('s')
@@ -160,7 +160,7 @@ module HasGlobalSession
       expected = digest(hash)
       signer   = @directory.authorities[authority]
       raise SecurityError, "Unknown signing authority #{authority}" unless signer
-      got      = signer.public_decrypt(Encoding::Base64.load(signature))
+      got      = signer.public_decrypt(Encoding::Base64Cookie.load(signature))
       unless (got == expected)
         raise SecurityError, "Signature mismatch on global session cookie; tampering suspected"
       end
@@ -184,6 +184,13 @@ module HasGlobalSession
       @insecure   = insecure
       @signature  = signature
       @cookie     = cookie
+
+      #Auto-renew session if needed
+      renew = Configuration['renew']
+      if @directory.local_authority_name &&
+         renew && @expired_at < renew.to_i.minutes.from_now.utc
+        renew!
+      end
     end
 
     def create_from_scratch
