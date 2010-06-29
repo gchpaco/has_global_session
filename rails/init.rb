@@ -15,6 +15,7 @@ if File.exist?(config_file)
   class ActionController::Base
     def self.has_global_session
       include HasGlobalSession::ActionControllerInstanceMethods
+      before_filter :global_session_read_cookie
       after_filter  :global_session_update_cookie
     end
   end

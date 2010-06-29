@@ -35,9 +35,5 @@ module HasGlobalSession
     def report_invalid_session(uuid, expired_at)
       true
     end
-    
-    def report_exception(exception, cookie=nil)
-      true
-    end
   end  
 end

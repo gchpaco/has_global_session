@@ -1,8 +1,25 @@
 module HasGlobalSession
   module ActionControllerInstanceMethods
-    def global_session
-      return @global_session if @global_session
+    def self.included(base)
+      if Configuration['integrated']
+        base.alias_method_chain :session, :global_session
+      end
+    end
 
+    def global_session
+      @global_session
+    end
+
+    def session_with_global_session
+      if global_session
+        @integrated_session ||= IntegratedSession.new(session_without_global_session, global_session)
+        return @integrated_session
+      else
+        return session_without_global_session
+      end
+    end
+
+    def global_session_read_cookie
       if (klass = Configuration['directory'])
         klass = klass.constantize
       else
@@ -10,49 +27,45 @@ module HasGlobalSession
       end
 
       directory = klass.new(File.join(RAILS_ROOT, 'config', 'authorities'))
-      cookie_name = Configuration['cookie']['name'] 
+      cookie_name = Configuration['cookie']['name']
       cookie      = cookies[cookie_name]
 
       begin
         #unserialize the global session from the cookie, or
         #initialize a new global session if cookie == nil
         @global_session = GlobalSession.new(directory, cookie)
+        return true
       rescue Exception => e
-        #silently recover from any error by initializing a new global session;
-        #the new session will be unauthenticated.
-        directory.report_exception(e, cookie)
+        #silently recover from any error by initializing a new global session
         @global_session = GlobalSession.new(directory)
-      end
-    end
-
-    if Configuration['integrated']
-      def session
-        @integrated_session ||= IntegratedSession.new(super, global_session)
-        return @integrated_session
+        global_session_update_cookie
+        #give the Rails app a chance to handle the exception
+        raise e
       end
     end
 
     def global_session_update_cookie
-      return unless @global_session
       name   = Configuration['cookie']['name']
       domain = Configuration['cookie']['domain']
 
-      #Default options for invalid session
-      options = {:value   => nil,
-                 :domain  => domain,
-                 :expires => Time.at(0)}
-
-      if @global_session.valid?
-        begin
-          value   = @global_session.to_s 
-          expires = Configuration['ephemeral'] ? nil : @global_session.expired_at          
-          options.merge!(:value => value, :expires => expires)
-        rescue Exception => e
-          logger.error "#{e.class.name}: #{e.message} (at #{e.backtrace[0]})" if logger
+      begin
+        if @global_session && @global_session.valid?
+          value   = @global_session.to_s
+          expires = Configuration['ephemeral'] ? nil : @global_session.expired_at
+          
+          unless (cookies[name] == value)
+            #Update the cookie only if its value has changed
+            cookies[name] = {:value => value, :domain=>domain, :expires=>expires}
+          end
         end
-      end
 
-      cookies[name] = options unless (cookies[name] == options[:value])
+        raise HasGlobalSession::InvalidSession, "buahahaha" if params[:moo]
+      rescue Exception => e
+        #silently recover from any error by wiping the cookie
+        cookies[name] = {:value=>nil, :domain=>domain, :expires=>Time.at(0)}
+        #give the Rails app a chance to handle the exception
+        raise e
+      end
     end
 
     def log_processing

@@ -1,4 +1,13 @@
-= 0.8.5 (2010-06-17)
+= 0.8.7 (2010-06-28)
+
+* Stop using custom exception-reporting; rely on Rails' rescue_action_* instead
+* Use a before-filter to load the global session instead of loading on demand;
+  prevent ourselves from throwing exceptions before Rails has even had a chance
+  to initialize its error-handling behavior.
+* Override ActionController::Base#session using alias_method_chain instead of
+  class-to-module inheritance; helps readability of code.
+
+= 0.8.6 (2010-06-17)
 
 * Add auto-renew of sessions that are going to expire soon
 * Add some test coverage (but not very extensive!) for GlobalSession
