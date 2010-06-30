@@ -1,3 +1,8 @@
+= 0.8.9 (2010-06-29)
+
+* ExpiredSession exception for the error-handling convenience of the application.
+* Ensure we clear out the cookie when it throws an exception while trying to write it back. 
+
 = 0.8.7 (2010-06-28)
 
 * Stop using custom exception-reporting; rely on Rails' rescue_action_* instead
