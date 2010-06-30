@@ -2,6 +2,7 @@ module HasGlobalSession
   class MissingConfiguration < Exception; end
   class ConfigurationError < Exception; end
   class InvalidSession < Exception; end
+  class ExpiredSession < Exception; end
   class UnserializableType < Exception; end
   class NoAuthority < Exception; end
 end

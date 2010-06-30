@@ -95,10 +95,10 @@ describe GlobalSession do
         fake_now = Time.at(Time.now.to_i + 1.days)
         flexmock(Time).should_receive(:now).and_return(fake_now)        
       end
-      it 'should raise InvalidSession' do
+      it 'should raise ExpiredSession' do
         lambda {
           GlobalSession.new(@directory, @cookie)
-        }.should raise_error(InvalidSession)
+        }.should raise_error(ExpiredSession)
       end
     end
 

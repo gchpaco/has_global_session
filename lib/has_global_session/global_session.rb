@@ -171,8 +171,13 @@ module HasGlobalSession
       end
 
       #Check expiration
+      unless expired_at > Time.now.utc
+        raise ExpiredSession, "Session expired at #{expired_at}"        
+      end
+
+      #Check other validity (delegate to directory)
       unless @directory.valid_session?(id, expired_at)
-        raise InvalidSession, "Global session has expired or been invalidated"
+        raise InvalidSession, "Global session has been invalidated"
       end
 
       #If all validation stuff passed, assign our instance variables.
@@ -214,7 +219,7 @@ module HasGlobalSession
 
     def create_invalid
       @id         = nil
-      @created_at = Time.now
+      @created_at = Time.now.utc
       @expired_at = created_at
       @signed     = {}
       @insecure   = {}
