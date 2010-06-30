@@ -57,9 +57,10 @@ module HasGlobalSession
             #Update the cookie only if its value has changed
             cookies[name] = {:value => value, :domain=>domain, :expires=>expires}
           end
+        else
+          #No valid session? Write an empty cookie.
+          cookies[name] = {:value=>nil, :domain=>domain, :expires=>Time.at(0)}
         end
-
-        raise HasGlobalSession::InvalidSession, "buahahaha" if params[:moo]
       rescue Exception => e
         #silently recover from any error by wiping the cookie
         cookies[name] = {:value=>nil, :domain=>domain, :expires=>Time.at(0)}
