@@ -12,7 +12,10 @@ module HasGlobalSession
 
     def session_with_global_session
       if global_session
-        @integrated_session ||= IntegratedSession.new(session_without_global_session, global_session)
+        unless @integrated_session && (@integrated_session.global == @global_session)
+          @integrated_session =
+            IntegratedSession.new(session_without_global_session, global_session)
+        end
         return @integrated_session
       else
         return session_without_global_session
@@ -38,9 +41,9 @@ module HasGlobalSession
       rescue Exception => e
         #silently recover from any error by initializing a new global session
         @global_session = GlobalSession.new(directory)
-        global_session_update_cookie
         #give the Rails app a chance to handle the exception
-        raise e
+        #unless it's an ExpiredSession, which we handle transparently
+        raise e unless e.is_a?(ExpiredSession)
       end
     end
 

@@ -1,3 +1,8 @@
+= 0.8.10 (2010-07-01)
+
+* Don't raise ExpiredSession in Rails before-filter (it causes weird edge cases).
+* Ensure IntegratedSession never has a stale GlobalSession.
+
 = 0.8.9 (2010-06-29)
 
 * ExpiredSession exception for the error-handling convenience of the application.
