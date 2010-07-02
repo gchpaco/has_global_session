@@ -7,7 +7,7 @@ spec = Gem::Specification.new do |s|
   s.required_ruby_version = Gem::Requirement.new(">= 1.8.7")
 
   s.name    = 'has_global_session'
-  s.version = '0.8.10'
+  s.version = '0.9.0'
   s.date    = '2010-07-01'
 
   s.authors = ['Tony Spataro']
@@ -27,11 +27,11 @@ spec = Gem::Specification.new do |s|
   basedir = File.dirname(__FILE__)
   candidates = ['has_global_session.gemspec', 'init.rb', 'MIT-LICENSE', 'README.rdoc'] +
             Dir['lib/**/*'] +
-            Dir['rails/**/*']
+            Dir['rails/**/*'] +
+            Dir['rails_generators/**/*']
   s.files = candidates.sort
 end
 
 if $PROGRAM_NAME == __FILE__
-   Gem.manage_gems if Gem::RubyGemsVersion.to_f < 1.0
    Gem::Builder.new(spec).build
 end

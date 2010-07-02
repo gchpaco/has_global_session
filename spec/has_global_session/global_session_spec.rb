@@ -101,24 +101,5 @@ describe GlobalSession do
         }.should raise_error(ExpiredSession)
       end
     end
-
-    context 'when auto-renew is enabled' do
-      before(:each) do
-        mock_config('test/renew', '15')
-      end
-
-      it 'should not renew the cookie if not needed' do
-        session = GlobalSession.new(@directory, @cookie)
-        session.expired_at.should be_close(@original_session.expired_at, 1)
-      end
-
-      it 'should renew the cookie if needed' do
-        fake_now = Time.at(Time.now.to_i + 55.minutes)
-        flexmock(Time).should_receive(:now).and_return(fake_now)
-
-        session = GlobalSession.new(@directory, @cookie)
-        session.expired_at.should_not eql(@original_session.expired_at)
-      end
-    end
   end
 end

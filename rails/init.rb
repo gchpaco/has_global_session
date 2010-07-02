@@ -1,5 +1,6 @@
 basedir = File.expand_path(File.join(File.dirname(__FILE__), '..'))
-require File.join(basedir, 'lib', 'has_global_session')
+libdir  = File.join(basedir, 'lib')
+require File.join(libdir, 'has_global_session')
 
 config_file = File.join(RAILS_ROOT, 'config', 'global_session.yml')
 
@@ -9,14 +10,12 @@ if File.exist?(config_file)
   HasGlobalSession::Configuration.config_file = config_file
   HasGlobalSession::Configuration.environment = RAILS_ENV
   
-  require File.join(basedir, 'rails', 'action_controller_instance_methods')
+  require File.join(libdir, 'has_global_session', 'rails')
 
   # Enable ActionController integration.
   class ActionController::Base
     def self.has_global_session
-      include HasGlobalSession::ActionControllerInstanceMethods
-      before_filter :global_session_read_cookie
-      after_filter  :global_session_update_cookie
+      include HasGlobalSession::Rails::ActionControllerInstanceMethods
     end
   end
 end

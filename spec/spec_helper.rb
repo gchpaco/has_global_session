@@ -8,6 +8,8 @@ require 'flexmock'
 
 require 'has_global_session'
 
+require File.join('has_global_session', 'rails', 'action_controller_instance_methods')
+
 Spec::Runner.configure do |config|
   config.mock_with :flexmock
 end

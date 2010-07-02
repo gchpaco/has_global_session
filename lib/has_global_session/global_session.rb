@@ -7,7 +7,7 @@ require 'uuidtools'
 
 module HasGlobalSession 
   class GlobalSession
-    attr_reader :id, :authority, :created_at, :expired_at
+    attr_reader :id, :authority, :created_at, :expired_at, :directory
 
     def initialize(directory, cookie=nil)
       @schema_signed   = Set.new((Configuration['attributes']['signed']))
@@ -189,13 +189,6 @@ module HasGlobalSession
       @insecure   = insecure
       @signature  = signature
       @cookie     = cookie
-
-      #Auto-renew session if needed
-      renew = Configuration['renew']
-      if @directory.local_authority_name &&
-         renew && @expired_at < renew.to_i.minutes.from_now.utc
-        renew!
-      end
     end
 
     def create_from_scratch

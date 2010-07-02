@@ -1,14 +1,29 @@
-= 0.8.10 (2010-07-01)
+== 0.9
+
+Minimum viable product is feature-complete and has full spec coverage. Integration with Rails (2.1.2 - 2.3.8) is supported.
+
+Documentation is not yet available. Some specs may be pending.
+
+=== 0.9.0 (2010-07-02)
+
+* Perform auto-renew using a before filter instead of doing it inside GlobalSession#initialize.
+* Add a bunch of spec coverage
+
+== 0.8
+
+Working prototype that is being iteratively developed and tested with various real-life Rails apps.
+
+=== 0.8.10 (2010-07-01)
 
 * Don't raise ExpiredSession in Rails before-filter (it causes weird edge cases).
 * Ensure IntegratedSession never has a stale GlobalSession.
 
-= 0.8.9 (2010-06-29)
+=== 0.8.9 (2010-06-29)
 
 * ExpiredSession exception for the error-handling convenience of the application.
 * Ensure we clear out the cookie when it throws an exception while trying to write it back. 
 
-= 0.8.7 (2010-06-28)
+=== 0.8.7 (2010-06-28)
 
 * Stop using custom exception-reporting; rely on Rails' rescue_action_* instead
 * Use a before-filter to load the global session instead of loading on demand;
@@ -17,23 +32,23 @@
 * Override ActionController::Base#session using alias_method_chain instead of
   class-to-module inheritance; helps readability of code.
 
-= 0.8.6 (2010-06-17)
+=== 0.8.6 (2010-06-17)
 
 * Add auto-renew of sessions that are going to expire soon
 * Add some test coverage (but not very extensive!) for GlobalSession
 
-= 0.8.5 (2010-06-16)
+=== 0.8.5 (2010-06-16)
 
 * Bug fix in GlobalSession (calling Directory method with wrong number of params)
 * Undo some stupid decisions made in 0.8.4
 
-= 0.8.4 (2010-06-15)
+=== 0.8.4 (2010-06-15)
 
 * Change #expires_at to #expired_at
 * Change some Directory callbacks to enable more reliable single sign-out for
   custom Directory implementations.
 
-= 0.8.3 (2010-06-11)
+=== 0.8.3 (2010-06-11)
 
 * Explicitly track local authority name in config (avoid misconfiguration errors)
 * Change cookie encoding to single-line, URL-friendly Base64
