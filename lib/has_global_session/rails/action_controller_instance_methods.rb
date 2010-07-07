@@ -39,10 +39,13 @@ module HasGlobalSession
           return true
         rescue Exception => e
           #silently recover from any error by initializing a new global session
+          #and updating the session cookie
           @global_session = GlobalSession.new(directory)
+          global_session_update_cookie
+
           #give the Rails app a chance to handle the exception
           #unless it's an ExpiredSession, which we handle transparently
-          raise e unless e.is_a?(ExpiredSession)
+          raise e
         end
       end
 

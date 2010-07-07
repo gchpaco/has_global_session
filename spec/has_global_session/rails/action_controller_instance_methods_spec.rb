@@ -58,22 +58,12 @@ describe Rails::ActionControllerInstanceMethods do
 
   context :global_session_read_cookie do
     context 'when an exception is raised' do
-      it 'should create a new session and swallow ExpiredSession' do
-        flexmock(GlobalSession).should_receive(:new).
-                with(@directory, @cookie).and_raise(ExpiredSession)
-        flexmock(GlobalSession).should_receive(:new).with(@directory)
-
-        lambda {
-          @controller.global_session_read_cookie
-        }.should_not raise_error        
-        @controller.global_session.id.should_not eql(@original_session.id)
-      end
-
-      it 'should create a new session and re-raise most exceptions' do
+      it 'should create a new session, update the cookie, and re-raise' do
         flexmock(GlobalSession).should_receive(:new).
                 with(@directory, @cookie).and_raise(InvalidSession)
         flexmock(GlobalSession).should_receive(:new).with(@directory)
 
+        flexmock(@controller.cookies).should_receive(:[]=)
         lambda {
           @controller.global_session_read_cookie
         }.should raise_error(InvalidSession)        

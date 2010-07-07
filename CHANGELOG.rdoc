@@ -4,6 +4,10 @@ Minimum viable product is feature-complete and has full spec coverage. Integrati
 
 Documentation is not yet available. Some specs may be pending.
 
+=== 0.9.1 (2010-07-06)
+
+* Fix a bug in Rails integration that was caused by my lack of understanding of filters. (Turns out that after_filters do not fire when a before_filter raises an exception.)
+
 === 0.9.0 (2010-07-02)
 
 * Perform auto-renew using a before filter instead of doing it inside GlobalSession#initialize.
