@@ -17,7 +17,9 @@ module HasGlobalSession
 
       def session_with_global_session
         if global_session
-          unless @integrated_session && (@integrated_session.global == @global_session)
+          unless @integrated_session &&
+                 (@integrated_session.local == session_without_global_session) && 
+                 (@integrated_session.global == @global_session)
             @integrated_session =
               IntegratedSession.new(session_without_global_session, global_session)
           end

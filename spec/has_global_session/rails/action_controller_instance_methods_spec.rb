@@ -113,7 +113,10 @@ describe Rails::ActionControllerInstanceMethods do
     context 'when a global session has been instantiated' do
       it 'should return an integrated session'
     end
-    context 'when the global session ID has changed' do
+    context 'when the global session has been reset' do
+      it 'should return a fresh integrated session'
+    end
+    context 'when the local session has been reset' do
       it 'should return a fresh integrated session'
     end
   end
