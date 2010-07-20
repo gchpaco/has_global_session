@@ -8,6 +8,10 @@ require 'flexmock'
 
 require 'has_global_session'
 
+#For Rails integration specs
+gem 'actionpack', '>= 2.1.2'
+require 'action_controller'
+
 require File.join('has_global_session', 'rails', 'action_controller_instance_methods')
 
 Spec::Runner.configure do |config|

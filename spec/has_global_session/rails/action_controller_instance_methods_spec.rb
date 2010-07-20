@@ -2,18 +2,35 @@ require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'spec_hel
 
 include HasGlobalSession
 
-class StubController
-  def initialize(cookies={}, local_session={})
+class StubRequest
+  attr_reader :cookies, :params
+
+  def initialize(cookies, params)
     @cookies = cookies
-    @session = local_session
-    @request = Object.new
+    @params  = params
+  end
+end
+
+class StubResponse
+  def initialize(cookies)
+    @cookies = cookies
   end
 
-  attr_reader :cookies, :session, :request
+  def set_cookie(key, hash)
+    @cookies[key] = hash[:value]
+  end
+end
 
-  def self.before_filter(sym); true; end
+class StubController < ActionController::Base
+  include Rails::ActionControllerInstanceMethods
 
-  def self.after_filter(sym); true; end
+  def initialize(cookies={}, local_session={})
+    super()
+
+    self.request  = StubRequest.new(cookies, params)
+    self.response = StubResponse.new(cookies)
+    self.session  = local_session
+  end
 end
 
 describe Rails::ActionControllerInstanceMethods do
@@ -25,10 +42,6 @@ describe Rails::ActionControllerInstanceMethods do
     @keystore.create('authority2', false)
 
     mock_config('common/integrated', true)
-
-    class StubController
-      include Rails::ActionControllerInstanceMethods
-    end
   end
 
   after(:all) do
@@ -58,13 +71,25 @@ describe Rails::ActionControllerInstanceMethods do
   end
 
   context :global_session_read_cookie do
+    context 'when a trusted signature is cached' do
+      before(:each) do
+        hash = @original_session.signature_digest
+        @controller.session_without_global_session[:_session_gbl_valid_sig] = hash
+      end
+
+      it 'should not revalidate the signature' do
+        flexmock(@directory.authorities['authority1']).should_receive(:public_decrypt).never
+        @controller.global_session_read_cookie
+      end
+    end
+
     context 'when an exception is raised' do
       it 'should create a new session, update the cookie, and re-raise' do
         flexmock(GlobalSession).should_receive(:new).
-                with(@directory, @cookie).and_raise(InvalidSession)
+                with(@directory, @cookie, nil).and_raise(InvalidSession)
         flexmock(GlobalSession).should_receive(:new).with(@directory)
 
-        flexmock(@controller.cookies).should_receive(:[]=)
+        flexmock(@controller.request.cookies).should_receive(:[]=)
         lambda {
           @controller.global_session_read_cookie
         }.should raise_error(InvalidSession)        

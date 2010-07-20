@@ -4,6 +4,11 @@ Minimum viable product is feature-complete and has full spec coverage. Integrati
 
 Documentation is not yet available. Some specs may be pending.
 
+=== 0.9.4 (2010-07-20)
+
+* Cache valid signature in local session so we don't need to do RSA verify every time.
+* Improve the Rails integration spec (use real ActionController & friends).
+
 === 0.9.3 (2010-07-19)
 
 * Allow "domain-less cookie" in config; cookie will use request.env['SERVER_NAME'] as its domain

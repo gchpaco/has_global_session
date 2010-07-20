@@ -7,8 +7,8 @@ spec = Gem::Specification.new do |s|
   s.required_ruby_version = Gem::Requirement.new(">= 1.8.7")
 
   s.name    = 'has_global_session'
-  s.version = '0.9.3'
-  s.date    = '2010-07-19'
+  s.version = '0.9.4'
+  s.date    = '2010-07-20'
 
   s.authors = ['Tony Spataro']
   s.email   = 'code@tracker.xeger.net'
@@ -23,6 +23,7 @@ spec = Gem::Specification.new do |s|
 
   s.add_development_dependency('rspec', [">= 1.3.0"])
   s.add_development_dependency('flexmock', [">= 0.8.6"])
+  s.add_development_dependency('actionpack', [">= 2.1.2"])
 
   basedir = File.dirname(__FILE__)
   candidates = ['has_global_session.gemspec', 'init.rb', 'MIT-LICENSE', 'README.rdoc'] +

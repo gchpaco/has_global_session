@@ -9,13 +9,13 @@ module HasGlobalSession
   class GlobalSession
     attr_reader :id, :authority, :created_at, :expired_at, :directory
 
-    def initialize(directory, cookie=nil)
+    def initialize(directory, cookie=nil, valid_signature_digest=nil)
       @schema_signed   = Set.new((Configuration['attributes']['signed']))
       @schema_insecure = Set.new((Configuration['attributes']['insecure']))
       @directory       = directory
 
       if cookie
-        load_from_cookie(cookie)
+        load_from_cookie(cookie, valid_signature_digest)
       elsif @directory.local_authority_name
         create_from_scratch
       else
@@ -40,17 +40,16 @@ module HasGlobalSession
       if @signature && !@dirty_secure
         #use cached signature unless we've changed secure state
         authority = @authority
-        signature = @signature
       else
         authority_check
         authority = @directory.local_authority_name
         hash['a'] = authority
-        digest    = digest(hash)
-        signature = Encoding::Base64Cookie.dump(@directory.private_key.private_encrypt(digest))
+        digest    = canonical_digest(hash)
+        @signature = Encoding::Base64Cookie.dump(@directory.private_key.private_encrypt(digest))
       end
 
       hash['dx'] = @insecure
-      hash['s']  = signature
+      hash['s']  = @signature
       hash['a']  = authority
       
       json = Encoding::JSON.dump(hash)
@@ -64,6 +63,10 @@ module HasGlobalSession
 
     def has_key?(key)
       @signed.has_key(key) || @insecure.has_key?(key)
+    end
+
+    def signature_digest
+      digest(@signature)
     end
 
     def keys
@@ -119,9 +122,13 @@ module HasGlobalSession
       end      
     end
 
-    def digest(input)
+    def canonical_digest(input)
       canonical = Encoding::JSON.dump(canonicalize(input))
-      return Digest::SHA1.new().update(canonical).hexdigest
+      return digest(canonical)
+    end
+
+    def digest(input)
+      return Digest::SHA1.new().update(input).hexdigest
     end
 
     def canonicalize(input)
@@ -143,7 +150,7 @@ module HasGlobalSession
       return output
     end
 
-    def load_from_cookie(cookie)
+    def load_from_cookie(cookie, valid_signature_digest)
       zbin = Encoding::Base64Cookie.load(cookie)
       json = Zlib::Inflate.inflate(zbin)
       hash = Encoding::JSON.load(json)
@@ -156,15 +163,17 @@ module HasGlobalSession
       insecure   = hash.delete('dx')
       signature  = hash.delete('s')
 
-      #Check signature
-      expected = digest(hash)
-      signer   = @directory.authorities[authority]
-      raise SecurityError, "Unknown signing authority #{authority}" unless signer
-      got      = signer.public_decrypt(Encoding::Base64Cookie.load(signature))
-      unless (got == expected)
-        raise SecurityError, "Signature mismatch on global session cookie; tampering suspected"
+      unless valid_signature_digest == digest(signature)
+        #Check signature
+        expected = canonical_digest(hash)
+        signer   = @directory.authorities[authority]
+        raise SecurityError, "Unknown signing authority #{authority}" unless signer
+        got      = signer.public_decrypt(Encoding::Base64Cookie.load(signature))
+        unless (got == expected)
+          raise SecurityError, "Signature mismatch on global session cookie; tampering suspected"
+        end
       end
-
+      
       #Check trust in signing authority
       unless @directory.trusted_authority?(authority)
         raise SecurityError, "Global sessions signed by #{authority} are not trusted"

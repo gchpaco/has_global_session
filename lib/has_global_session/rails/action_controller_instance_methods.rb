@@ -2,10 +2,7 @@ module HasGlobalSession
   module Rails
     module ActionControllerInstanceMethods
       def self.included(base)
-        if Configuration['integrated']
-          base.alias_method_chain :session, :global_session
-        end
-
+        base.alias_method_chain :session, :global_session
         base.before_filter :global_session_read_cookie
         base.before_filter :global_session_auto_renew
         base.after_filter  :global_session_update_cookie
@@ -16,13 +13,14 @@ module HasGlobalSession
       end
 
       def session_with_global_session
-        if global_session
+        if Configuration['integrated'] && @global_session
           unless @integrated_session &&
                  (@integrated_session.local == session_without_global_session) && 
                  (@integrated_session.global == @global_session)
             @integrated_session =
-              IntegratedSession.new(session_without_global_session, global_session)
+              IntegratedSession.new(session_without_global_session, @global_session)
           end
+          
           return @integrated_session
         else
           return session_without_global_session
@@ -35,9 +33,16 @@ module HasGlobalSession
         cookie      = cookies[cookie_name]
 
         begin
+          cached_digest = session_without_global_session[:_session_gbl_valid_sig]
+
           #unserialize the global session from the cookie, or
-          #initialize a new global session if cookie == nil
-          @global_session = GlobalSession.new(directory, cookie)
+          #initialize a new global session if cookie == nil.
+          #
+          #pass along the cached trusted signature (if any) so the new object
+          #can skip the expensive RSA Decrypt operation.
+          @global_session = GlobalSession.new(directory, cookie, cached_digest)
+
+          session_without_global_session[:_session_gbl_valid_sig] = @global_session.signature_digest
           return true
         rescue Exception => e
           #silently recover from any error by initializing a new global session
