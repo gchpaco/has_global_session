@@ -4,6 +4,10 @@ Minimum viable product is feature-complete and has full spec coverage. Integrati
 
 Documentation is not yet available. Some specs may be pending.
 
+=== 0.9.3 (2010-07-19)
+
+* Allow "domain-less cookie" in config; cookie will use request.env['SERVER_NAME'] as its domain
+
 === 0.9.2 (2010-07-14)
 
 * Fix a bug in Rails integration; make sure IntegratedSession#local always points to the current Rails session (in case reset_session is called during a request).

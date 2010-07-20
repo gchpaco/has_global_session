@@ -62,7 +62,7 @@ module HasGlobalSession
 
       def global_session_update_cookie
         name   = Configuration['cookie']['name']
-        domain = Configuration['cookie']['domain']
+        domain = Configuration['cookie']['domain'] || request.env['SERVER_NAME']
 
         begin
           if @global_session && @global_session.valid?

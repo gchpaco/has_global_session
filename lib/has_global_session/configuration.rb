@@ -11,7 +11,7 @@ module HasGlobalSession
     end
 
     def self.validate
-      ['attributes/signed', 'integrated', 'cookie/name', 'cookie/domain', 'timeout'].each do |path|
+      ['attributes/signed', 'integrated', 'cookie/name', 'timeout'].each do |path|
         elements = path.split '/'
         object = get(elements.shift, false)
         elements.each do |element|

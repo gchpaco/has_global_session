@@ -6,9 +6,10 @@ class StubController
   def initialize(cookies={}, local_session={})
     @cookies = cookies
     @session = local_session
+    @request = Object.new
   end
 
-  attr_reader :global_session, :cookies, :session
+  attr_reader :cookies, :session, :request
 
   def self.before_filter(sym); true; end
 
@@ -68,6 +69,44 @@ describe Rails::ActionControllerInstanceMethods do
           @controller.global_session_read_cookie
         }.should raise_error(InvalidSession)        
         @controller.global_session.id.should_not eql(@original_session.id)
+      end
+    end
+  end
+
+  context :global_session_update_cookie do
+    before(:each) do
+      @mock_cookies = flexmock('cookie store')
+      @mock_cookies.should_receive(:[]).with('global_session_cookie').and_return(@cookie)
+      flexmock(@controller).should_receive(:cookies).and_return(@mock_cookies)
+    end
+
+    context 'when the configuration specifies a cookie domain' do
+      before(:each) do
+        mock_config('test/cookie/domain', 'realhost.com')
+      end
+
+      it 'should set cookies with the domain specified in the configuraiton' do
+        @mock_cookies.should_receive(:[]=).with('global_session_cookie',
+                      {:value=>nil, :domain=>'realhost.com', :expires=>Time.at(0)}).once
+
+        @controller.global_session_update_cookie
+      end
+    end
+    context 'when the configuration does not specify a cookie domain' do
+      before(:each) do
+        mock_config('test/cookie/domain', nil)
+      end
+
+      it 'should use the server name associated with the HTTP request' do
+        server_name = 'localtesthost.somewhere.local'
+        env = flexmock('Request environment')
+        env.should_receive(:[]).with('SERVER_NAME').and_return(server_name)
+        flexmock(@controller.request).should_receive(:env).and_return(env)        
+
+        @mock_cookies.should_receive(:[]=).with('global_session_cookie',
+                                                {:value=>nil, :domain=>server_name, :expires=>Time.at(0)}).once
+
+        @controller.global_session_update_cookie
       end
     end
   end
