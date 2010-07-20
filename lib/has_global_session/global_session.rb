@@ -66,7 +66,7 @@ module HasGlobalSession
     end
 
     def signature_digest
-      digest(@signature)
+      @signature ? digest(@signature) : nil
     end
 
     def keys

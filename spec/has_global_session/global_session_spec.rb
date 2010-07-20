@@ -26,7 +26,6 @@ describe GlobalSession do
     reset_mock_config
   end
 
-
   context :load_from_cookie do
     before(:each) do
       mock_config('test/trust', ['authority1'])
@@ -39,6 +38,14 @@ describe GlobalSession do
     context 'when everything is copascetic' do
       it 'should succeed' do
         GlobalSession.should === GlobalSession.new(@directory, @cookie)
+      end
+    end
+
+    context 'when a trusted signature is passed in' do
+      it 'should not recompute the signature' do
+        flexmock(@directory.authorities['authority1']).should_receive(:public_decrypt).never
+        valid_digest = @original_session.signature_digest
+        GlobalSession.should === GlobalSession.new(@directory, @cookie, valid_digest)
       end
     end
 

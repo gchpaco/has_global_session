@@ -71,6 +71,19 @@ describe Rails::ActionControllerInstanceMethods do
   end
 
   context :global_session_read_cookie do
+    context 'when no cookie is present in the request' do
+      before(:each) do
+        @controller.request.cookies['global_session_cookie'] = nil
+      end
+
+      it 'should initialize a new session' do
+        @controller.global_session.should be_nil
+        @controller.global_session_read_cookie
+        @controller.global_session.should_not be_nil
+        @controller.global_session.valid?.should be_true
+      end
+    end
+
     context 'when a trusted signature is cached' do
       before(:each) do
         hash = @original_session.signature_digest
@@ -79,6 +92,16 @@ describe Rails::ActionControllerInstanceMethods do
 
       it 'should not revalidate the signature' do
         flexmock(@directory.authorities['authority1']).should_receive(:public_decrypt).never
+        @controller.global_session_read_cookie
+      end
+    end
+
+    context 'when no trusted signature is cached' do
+      before(:each) do
+        @controller.session_without_global_session[:_session_gbl_valid_sig] = nil        
+      end
+
+      it 'should revalidate the signature' do
         @controller.global_session_read_cookie
       end
     end

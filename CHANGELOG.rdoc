@@ -4,7 +4,11 @@ Minimum viable product is feature-complete and has full spec coverage. Integrati
 
 Documentation is not yet available. Some specs may be pending.
 
-=== 0.9.4 (2010-07-20)
+=== 0.9.5 (2010-07-20)
+
+* Fix a showstopper bug in 0.9.4
+
+=== 0.9.4 (2010-07-20) [YANKED]
 
 * Cache valid signature in local session so we don't need to do RSA verify every time.
 * Improve the Rails integration spec (use real ActionController & friends).
