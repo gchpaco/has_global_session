@@ -1,17 +1,39 @@
 module HasGlobalSession
+  # Rails integration for HasGlobalSession.
+  #
+  # The configuration file for Rails apps is located in +config/global_session.yml+ and a generator
+  # (global_session_config) is available for creating a sensible default.
+  #
+  # There is also a generator (global_session_authority) for creating authority keypairs.
+  #
+  # The main integration touchpoint for Rails is the module ActionControllerInstanceMethods,
+  # which gets mixed into ActionController::Base. This is where all of the magic happens..
+  #
   module Rails
+    # Module that is mixed into ActionController-derived classes when the class method
+    # +has_global_session+ is called.
+    #
     module ActionControllerInstanceMethods
-      def self.included(base)
+      def self.included(base) # :nodoc:
         base.alias_method_chain :session, :global_session
         base.before_filter :global_session_read_cookie
         base.before_filter :global_session_auto_renew
         base.after_filter  :global_session_update_cookie
       end
 
+      # Global session reader.
+      #
+      # === Return
+      # session(GlobalSession):: the global session associated with the current request, nil if none
       def global_session
         @global_session
       end
 
+      # Aliased version of ActionController::Base#session which will return the integrated
+      # global-and-local session object (IntegratedSession).
+      #
+      # === Return
+      # session(IntegratedSession):: the integrated session
       def session_with_global_session
         if Configuration['integrated'] && @global_session
           unless @integrated_session &&
@@ -27,6 +49,11 @@ module HasGlobalSession
         end
       end
 
+      # Before-filter to read the global session cookie and construct the GlobalSession object
+      # for this controller instance.
+      #
+      # === Return
+      # true:: Always returns true
       def global_session_read_cookie
         directory   = global_session_create_directory
         cookie_name = Configuration['cookie']['name']
@@ -56,15 +83,27 @@ module HasGlobalSession
         end
       end
 
+      # Before-filter to renew the global session if it will be expiring soon.
+      #
+      # === Return
+      # true:: Always returns true
       def global_session_auto_renew
         #Auto-renew session if needed
         renew = Configuration['renew']
-        if @global_session.directory.local_authority_name && renew &&
+        if @global_session &&
+           renew &&
+           @global_session.directory.local_authority_name &&
            @global_session.expired_at < renew.to_i.minutes.from_now.utc
           @global_session.renew!
-        end        
+        end
+
+        return true
       end
 
+      # After-filter to write any pending changes to the global session cookie.
+      #
+      # === Return
+      # true:: Always returns true
       def global_session_update_cookie
         name   = Configuration['cookie']['name']
         domain = Configuration['cookie']['domain'] || request.env['SERVER_NAME']
@@ -90,6 +129,15 @@ module HasGlobalSession
         end
       end
 
+      # Override for the ActionController method of the same name that logs
+      # information about the request. Our version logs the global session ID
+      # instead of the local session ID.
+      #
+      # === Parameters
+      # name(Type):: Description
+      #
+      # === Return
+      # name(Type):: Description
       def log_processing
         if logger && logger.info?
           log_processing_for_request_id
@@ -97,7 +145,7 @@ module HasGlobalSession
         end
       end
 
-      def log_processing_for_request_id
+      def log_processing_for_request_id # :nodoc:
         if global_session && global_session.id
           session_id = global_session.id + " (#{session[:session_id]})"
         elsif session[:session_id]
@@ -114,7 +162,7 @@ module HasGlobalSession
         logger.info(request_id)
       end
 
-      def log_processing_for_parameters
+      def log_processing_for_parameters # :nodoc:
         parameters = respond_to?(:filter_parameters) ? filter_parameters(params) : params.dup
         parameters = parameters.except!(:controller, :action, :format, :_method)
 
@@ -123,7 +171,7 @@ module HasGlobalSession
 
       private
 
-      def global_session_create_directory
+      def global_session_create_directory # :nodoc:
         if (klass = Configuration['directory'])
           klass = klass.constantize
         else

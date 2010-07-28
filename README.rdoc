@@ -176,10 +176,4 @@ class name of the directory under the 'common' section, like so:
     integrated: true
     directory: MyCoolDirectory
 
-= To-Do
-
-* Option to auto-renew session
-
-* Implement single sign-out via redirect
-
 Copyright (c) 2010 Tony Spataro <code@tracker.xeger.net>, released under the MIT license

@@ -195,16 +195,47 @@ describe Rails::ActionControllerInstanceMethods do
 
   context :session_with_global_session do
     context 'when no global session has been instantiated yet' do
-      it 'should return the Rails session'
+      before(:each) do
+        @controller.global_session.should be_nil
+      end
+
+      it 'should return the Rails session' do
+        flexmock(@controller).should_receive(:session_without_global_session).and_return('local session')
+        @controller.session.should == 'local session'
+      end
     end
     context 'when a global session has been instantiated' do
-      it 'should return an integrated session'
+      before(:each) do
+        @controller.global_session_read_cookie
+      end
+
+      it 'should return an integrated session' do
+        IntegratedSession.should === @controller.session
+      end
     end
     context 'when the global session has been reset' do
-      it 'should return a fresh integrated session'
+      before(:each) do
+        @controller.global_session_read_cookie
+        @old_integrated_session = @controller.session
+        IntegratedSession.should === @old_integrated_session
+        @controller.instance_variable_set(:@global_session, 'new global session')
+      end
+
+      it 'should return a fresh integrated session' do
+        @controller.session.should_not == @old_integrated_session
+      end
     end
     context 'when the local session has been reset' do
-      it 'should return a fresh integrated session'
+      before(:each) do
+        @controller.global_session_read_cookie
+        @old_integrated_session = @controller.session
+        IntegratedSession.should === @old_integrated_session
+        @controller.session = 'new local session'
+      end
+
+      it 'should return a fresh integrated session' do
+        @controller.session.should_not == @old_integrated_session
+      end
     end
   end
 end

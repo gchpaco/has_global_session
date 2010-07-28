@@ -1,3 +1,11 @@
+== 1.0 Feature-complete propduct with full spec coverage and documentation. Integration with Rails (2.1.2 - 2.3.8) is supported.
+
+=== 1.0 (2010-07-28)
+
+* Add RDocs for every public class and method of the gem.
+* Implement all remaining pending specs.
+* Add a new exception (MalformedCookie) to avoid confusing users with ZLib and JSON encoding errors.
+
 == 0.9
 
 Minimum viable product is feature-complete and has full spec coverage. Integration with Rails (2.1.2 - 2.3.8) is supported.

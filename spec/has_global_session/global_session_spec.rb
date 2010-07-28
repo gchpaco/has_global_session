@@ -108,5 +108,34 @@ describe GlobalSession do
         }.should raise_error(ExpiredSession)
       end
     end
+
+    context 'when an empty cookie is supplied' do
+      it 'should create a new valid session' do
+        GlobalSession.new(@directory, '').valid?.should be_true
+      end
+
+      context 'and there is no local authority' do
+        before(:each) do
+          flexmock(@directory).should_receive(:local_authority_name).and_return(nil)
+          flexmock(@directory).should_receive(:private_key).and_return(nil)
+        end
+
+        it 'should create a new invalid session' do
+          GlobalSession.new(@directory, '').valid?.should be_false
+        end
+      end
+    end
+
+    context 'when malformed cookies are supplied' do
+      bad_cookies = [ '#$(%*#@%^&#!($%*#', rand(2**256).to_s(16) ]
+
+      bad_cookies.each do |cookie|
+        it 'should cope' do
+          lambda {
+            GlobalSession.new(@directory, cookie)
+          }.should raise_error(HasGlobalSession::MalformedCookie)
+        end
+      end
+    end
   end
 end
