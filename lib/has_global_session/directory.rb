@@ -29,7 +29,7 @@ module HasGlobalSession
   # at initialization time.
   #
   class Directory
-    attr_reader :authorities, :private_key, :local_authority_name
+    attr_reader :configuration, :authorities, :private_key, :local_authority_name
 
     # Create a new Directory.
     #
@@ -38,7 +38,8 @@ module HasGlobalSession
     #
     # ===Raise
     # ConfigurationError:: if too many or too few keys are found, or if *.key/*.pub files are malformatted
-    def initialize(keystore_directory)
+    def initialize(configuration, keystore_directory)
+      @configuration = configuration
       certs = Dir[File.join(keystore_directory, '*.pub')]
       keys  = Dir[File.join(keystore_directory, '*.key')]
       raise ConfigurationError, "Excepted 0 or 1 key files, found #{keys.size}" unless [0, 1].include?(keys.size)
@@ -51,7 +52,7 @@ module HasGlobalSession
         raise ConfigurationError, "Expected #{basename} to contain an RSA public key" unless @authorities[authority].public?
       end
 
-      if (authority_name = Configuration['authority'])
+      if (authority_name = @configuration['authority'])
         key_file = keys.detect { |kf| kf =~ /#{authority_name}.key$/ }
         raise ConfigurationError, "Key file #{authority_name}.key not found" unless key_file        
         @private_key  = OpenSSL::PKey::RSA.new(File.read(key_file))
@@ -69,7 +70,7 @@ module HasGlobalSession
     # === Return
     # trusted(true|false):: whether the local system trusts sessions signed by the specified authority
     def trusted_authority?(authority)
-      Configuration['trust'].include?(authority)
+      @configuration['trust'].include?(authority)
     end
 
     # Determine whether the given session UUID is valid. The default implementation only considers

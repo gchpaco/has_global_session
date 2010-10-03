@@ -29,8 +29,9 @@ module HasGlobalSession
     # MalformedCookie:: if the cookie was corrupt or malformed
     # SecurityError:: if signature is invalid or cookie is not signed by a trusted authority
     def initialize(directory, cookie=nil, valid_signature_digest=nil)
-      @schema_signed   = Set.new((Configuration['attributes']['signed']))
-      @schema_insecure = Set.new((Configuration['attributes']['insecure']))
+      @configuration   = directory.configuration
+      @schema_signed   = Set.new((@configuration['attributes']['signed']))
+      @schema_insecure = Set.new((@configuration['attributes']['insecure']))
       @directory       = directory
 
       if cookie && !cookie.empty?
@@ -200,7 +201,7 @@ module HasGlobalSession
     # true:: Always returns true
     def renew!
       authority_check
-      @expired_at = Configuration['timeout'].to_i.minutes.from_now.utc
+      @expired_at = @configuration['timeout'].to_i.minutes.from_now.utc
       @dirty_secure = true
     end
 

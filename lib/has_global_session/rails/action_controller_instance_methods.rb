@@ -21,6 +21,15 @@ module HasGlobalSession
         base.after_filter  :global_session_update_cookie
       end
 
+      # Shortcut accessor for global session configuration object. Simply delegates to
+      # the class method of the same name defined by ActionController::Base.
+      #
+      # === Return
+      # config(HasGlobalSession::Configuration)
+      def global_session_config
+        ActionController::Base.global_session_config
+      end
+
       # Global session reader.
       #
       # === Return
@@ -35,7 +44,7 @@ module HasGlobalSession
       # === Return
       # session(IntegratedSession):: the integrated session
       def session_with_global_session
-        if Configuration['integrated'] && @global_session
+        if global_session_config['integrated'] && @global_session
           unless @integrated_session &&
                  (@integrated_session.local == session_without_global_session) && 
                  (@integrated_session.global == @global_session)
@@ -56,7 +65,7 @@ module HasGlobalSession
       # true:: Always returns true
       def global_session_read_cookie
         directory   = global_session_create_directory
-        cookie_name = Configuration['cookie']['name']
+        cookie_name = global_session_config['cookie']['name']
         cookie      = cookies[cookie_name]
 
         begin
@@ -89,7 +98,7 @@ module HasGlobalSession
       # true:: Always returns true
       def global_session_auto_renew
         #Auto-renew session if needed
-        renew = Configuration['renew']
+        renew = global_session_config['renew']
         if @global_session &&
            renew &&
            @global_session.directory.local_authority_name &&
@@ -105,13 +114,13 @@ module HasGlobalSession
       # === Return
       # true:: Always returns true
       def global_session_update_cookie
-        name   = Configuration['cookie']['name']
-        domain = Configuration['cookie']['domain'] || request.env['SERVER_NAME']
+        name   = global_session_config['cookie']['name']
+        domain = global_session_config['cookie']['domain'] || request.env['SERVER_NAME']
 
         begin
           if @global_session && @global_session.valid?
             value   = @global_session.to_s
-            expires = Configuration['ephemeral'] ? nil : @global_session.expired_at
+            expires = global_session_config['ephemeral'] ? nil : @global_session.expired_at
 
             unless (cookies[name] == value)
               #Update the cookie only if its value has changed
@@ -172,7 +181,7 @@ module HasGlobalSession
       private
 
       def global_session_create_directory # :nodoc:
-        if (klass = Configuration['directory'])
+        if (klass = global_session_config['directory'])
           klass = klass.constantize
         else
           klass = Directory

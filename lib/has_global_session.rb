@@ -49,6 +49,9 @@ require 'uuidtools'
 require 'json'
 require 'active_support'
 
+#Require Ruby library dependencies
+require 'openssl'
+
 #Require the core suite of HasGlobalSession classes and modules
 basedir = File.dirname(__FILE__)
 require File.join(basedir, 'has_global_session', 'configuration')

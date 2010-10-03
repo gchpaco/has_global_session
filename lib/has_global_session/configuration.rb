@@ -22,6 +22,13 @@ module HasGlobalSession
   #     * name
   #     * domain
   #
+  # === Config Environments
+  # The operational environment of has_global_session defines which section
+  # of the configuration file it gets its settings from. When used with
+  # a web app, the environment should be set to the same environment as
+  # the web app. (If using Rails integration, this happens for you
+  # automatically.)
+  #
   # === Environment-Specific Settings
   # The top level of keys in the configuration hash are special; they provide different
   # sections of settings that apply in different environments. For instance, a Rails
@@ -44,55 +51,38 @@ module HasGlobalSession
   # The name and location of the config file depend on the Web framework with which
   # you are integrating; see HasGlobalSession::Rails for more information.
   #
-  module Configuration
-    # Reader for the environment module-attribute.
-    #
-    # === Return
-    # env(String):: The current configuration environment
-    def self.environment; @environment; end
-
-    # Writer for the environment module-attribute.
+  class Configuration
+    # Create a new Configuration objectt
     #
     # === Parameters
-    # value(String):: Configuration environment from which settings should be read
+    # config_File(String):: Absolute path to the configuration file
+    # environment(String):: Config file section from which
     #
-    # === Return
-    # env(String):: The new configuration environment
-    def self.environment=(value); @environment = value; end
-
-    # Reader for the config_file module-attribute.
-    #
-    # === Return
-    # file(String):: Absolute path to configuration file
-    def self.config_file; @config_file; end
-
-    # Writer for the config_file module-attribute.
-    #
-    # === Parameters
-    # value(String):: Absolute path to configuration file
-    #
-    # === Return
-    # env(String):: The new path to the configuration file
-    def self.config_file=(value); @config_file= value; end
+    # === Raise
+    # MissingConfiguration:: if config file is missing or unreadable
+    # TypeError:: if config file does not contain a YAML-serialized Hash
+    def initialize(config_file, environment)
+      raise MissingConfiguration, "Missing or unreadable configuration file" unless File.readable?(config_file)
+      @config      = YAML.load(File.read(config_file))
+      @environment = environment
+      raise TypeError, "#{config_file} must contain a Hash!" unless Hash === @config
+      validate
+    end
 
     # Reader for configuration elements. The reader first checks
     # the current environment's settings section for the named
     # value; if not found, it checks the common settings section.
     #
     # === Parameters
-    # name(Type):: Description
+    # key(String):: Name of configuration element to retrieve
     #
     # === Return
-    # name(Type):: Description
-    #
-    # === Raise
-    # MissingConfiguration:: if config file location is unset, environment is unset, or config file is missing
-    # TypeError:: if config file does not contain a YAML-serialized Hash
-    def self.[](key)
+    # value(String):: the value of the configuration element
+    def [](key)
       get(key, true)
     end
 
-    def self.validate # :nodoc
+    def validate # :nodoc
       ['attributes/signed', 'integrated', 'cookie/name', 'timeout'].each do |path|
         elements = path.split '/'
         object = get(elements.shift, false)
@@ -108,17 +98,10 @@ module HasGlobalSession
 
     private
 
-    def self.get(key, validated) # :nodoc
-      unless @config
-        raise MissingConfiguration, "config_file is nil; cannot read configuration" unless config_file
-        raise MissingConfiguration, "environment is nil; must be specified" unless environment
-        @config = YAML.load(File.read(config_file))
-        raise TypeError, "#{config_file} must contain a Hash!" unless Hash === @config
-        validate if validated
-      end
-      if @config.has_key?(environment) &&
-         @config[environment].has_key?(key)
-        return @config[environment][key]
+    def get(key, validated) # :nodoc
+      if @config.has_key?(@environment) &&
+         @config[@environment].has_key?(key)
+        return @config[@environment][key]
       else
         @config['common'][key]
       end
