@@ -29,7 +29,7 @@ describe Directory do
         it 'should raise ConfigurationError' do
           @keystore.create(@authority_name, false)
           lambda {
-            Directory.new(@keystore.dir)
+            Directory.new(mock_config, @keystore.dir)
           }.should raise_error(ConfigurationError)
         end
       end
@@ -38,7 +38,7 @@ describe Directory do
         it 'should raise ConfigurationError' do
           @keystore.create('wrong_name', true)
           lambda {
-            Directory.new(@keystore.dir)
+            Directory.new(mock_config, @keystore.dir)
           }.should raise_error(ConfigurationError)
         end
       end
@@ -49,7 +49,7 @@ describe Directory do
           @keystore.create('wrong_name', true)
 
           lambda {
-            Directory.new(@keystore.dir)
+            Directory.new(mock_config, @keystore.dir)
           }.should raise_error(ConfigurationError)
         end
       end
@@ -57,7 +57,7 @@ describe Directory do
       context 'and keystore contains a correctly-named private key' do
         it 'should succeed' do
           @keystore.create(@authority_name, true)
-          Directory.should === Directory.new(@keystore.dir)
+          Directory.should === Directory.new(mock_config, @keystore.dir)
         end
       end
     end

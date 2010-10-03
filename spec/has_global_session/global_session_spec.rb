@@ -30,7 +30,7 @@ describe GlobalSession do
     before(:each) do
       mock_config('test/trust', ['authority1'])
       mock_config('test/authority', 'authority1')
-      @directory        = Directory.new(@keystore.dir)
+      @directory        = Directory.new(mock_config, @keystore.dir)
       @original_session = GlobalSession.new(@directory)
       @cookie           = @original_session.to_s
     end
@@ -85,7 +85,7 @@ describe GlobalSession do
       before do
         mock_config('test/trust', ['authority1'])
         mock_config('test/authority', 'authority1')
-        @directory2 = Directory.new(@keystore.dir)
+        @directory2 = Directory.new(mock_config, @keystore.dir)
         @cookie = GlobalSession.new(@directory2).to_s
         mock_config('test/trust', ['authority2'])
         mock_config('test/authority', nil)        

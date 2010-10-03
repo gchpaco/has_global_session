@@ -21,6 +21,9 @@ class StubResponse
   end
 end
 
+# Stub controller into which we manually wire the HasGlobalSession instance methods.
+# Normally this would be accomplished via the "has_global_session" class method of
+# ActionController::Base, but we want to avoid the configuration-related madness.
 class StubController < ActionController::Base
   include Rails::ActionControllerInstanceMethods
 
@@ -54,10 +57,12 @@ describe Rails::ActionControllerInstanceMethods do
     mock_config('test/timeout', '60')
     mock_config('test/cookie/name', 'global_session_cookie')
     mock_config('test/cookie/domain', 'localhost')
-
     mock_config('test/trust', ['authority1'])
     mock_config('test/authority', 'authority1')
-    @directory        = Directory.new(@keystore.dir)
+
+    ActionController::Base.global_session_config = mock_config
+
+    @directory        = Directory.new(mock_config, @keystore.dir)
     @original_session = GlobalSession.new(@directory)
     @cookie           = @original_session.to_s
 

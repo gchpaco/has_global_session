@@ -8,11 +8,16 @@ require 'flexmock'
 
 require 'has_global_session'
 
-#For Rails integration specs
+# Setup Rails (for Rails integration specs)
 gem 'actionpack', '>= 2.1.2'
 require 'action_controller'
+require 'has_global_session/rails'
 
-require File.join('has_global_session', 'rails', 'action_controller_instance_methods')
+# Enable ActionController integration with Rails. Since we're not actually activating
+# the Rails plugin, we need to do this ourselves.
+class <<ActionController::Base
+  include HasGlobalSession::Rails::ActionControllerClassMethods
+end
 
 Spec::Runner.configure do |config|
   config.mock_with :flexmock
@@ -46,24 +51,30 @@ class KeyFactory
 end
 
 module SpecHelper
-  def mock_config(path, value)
-    Configuration.instance_variable_set(:@environment, 'test')    
-    hash = Configuration.instance_variable_get(:@config) || {}
-    Configuration.instance_variable_set(:@config, hash)
-    
-    path = path.split('/')
-    first_keys = path[0...-1]
-    last_key   = path.last
-    first_keys.each do |key|
-      hash[key] ||= {}
-      hash = hash[key]
+  # Getter for the HasGlobalSession::Configuration object
+  # used by tests. It doubles as a mechanism for stuffing
+  # config elements into said object.
+  def mock_config(path=nil, value=nil)
+    @mock_config ||= Configuration.allocate
+    @mock_config.instance_variable_set(:@environment, 'test')
+    hash = @mock_config.instance_variable_get(:@config) || {}
+    @mock_config.instance_variable_set(:@config, hash)
+
+    if(path || value)
+      path = path.split('/')
+      first_keys = path[0...-1]
+      last_key   = path.last
+      first_keys.each do |key|
+        hash[key] ||= {}
+        hash = hash[key]
+      end
+      hash[last_key] = value
     end
-    hash[last_key] = value
+
+    return @mock_config
   end
 
   def reset_mock_config
-    Configuration.instance_variable_set(:@config, nil)    
-    Configuration.instance_variable_set(:@config_file, nil)
-    Configuration.instance_variable_set(:@environment, nil)    
+    @mock_config = nil
   end
 end
