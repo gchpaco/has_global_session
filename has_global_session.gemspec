@@ -7,7 +7,7 @@ spec = Gem::Specification.new do |s|
   s.required_ruby_version = Gem::Requirement.new(">= 1.8.7")
 
   s.name    = 'has_global_session'
-  s.version = '1.0'
+  s.version = '1.1.0'
   s.date    = '2010-07-27'
 
   s.authors = ['Tony Spataro']
