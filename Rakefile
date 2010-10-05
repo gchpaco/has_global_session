@@ -2,6 +2,8 @@ require 'rubygems'
 require 'rake'
 require 'spec/rake/spectask'
 require 'rake/rdoctask'
+require 'rake/gempackagetask'
+require 'rake/clean'
 
 desc "Run unit tests"
 task :default => :spec
@@ -23,10 +25,12 @@ Rake::RDocTask.new(:rdoc) do |rdoc|
   rdoc.rdoc_files.include('lib/**/*.rb')
 end
 
+load File.expand_path(File.join(File.dirname(__FILE__), 'has_global_session.gemspec'))
+
 desc "Build has_global_session gem"
-task :gem do
-   ruby 'has_global_session.gemspec'
-   pkg_dir = File.join(File.dirname(__FILE__), 'pkg')
-   FileUtils.mkdir_p(pkg_dir)
-   FileUtils.mv(Dir.glob(File.join(File.dirname(__FILE__), '*.gem')), pkg_dir)
+Rake::GemPackageTask.new(SPEC) do |package|
+  package.need_zip = true
+  package.need_tar = true
 end
+
+CLEAN.include('pkg')
