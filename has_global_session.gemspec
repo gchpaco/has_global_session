@@ -32,7 +32,3 @@ spec = Gem::Specification.new do |s|
             Dir['rails_generators/**/*']
   s.files = candidates.sort
 end
-
-if $PROGRAM_NAME == __FILE__
-   Gem::Builder.new(spec).build
-end
