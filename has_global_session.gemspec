@@ -1,4 +1,4 @@
-# -*- encoding: utf-8 -*-
+# -*- mode: ruby; encoding: utf-8 -*-
 
 require 'rubygems'
 

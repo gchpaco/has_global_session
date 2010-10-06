@@ -1,3 +1,4 @@
+# -*-ruby-*-
 require 'rubygems'
 require 'rake'
 require 'spec/rake/spectask'
@@ -25,10 +26,8 @@ Rake::RDocTask.new(:rdoc) do |rdoc|
   rdoc.rdoc_files.include('lib/**/*.rb')
 end
 
-load File.expand_path(File.join(File.dirname(__FILE__), 'has_global_session.gemspec'))
-
 desc "Build has_global_session gem"
-Rake::GemPackageTask.new(SPEC) do |package|
+Rake::GemPackageTask.new(Gem::Specification.load("has_global_session.gemspec")) do |package|
   package.need_zip = true
   package.need_tar = true
 end
