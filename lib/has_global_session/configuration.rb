@@ -40,7 +40,7 @@ module HasGlobalSession
   # In addition to having one section for each operating environment, the configuration
   # file can specify a 'common' section for settings that apply
   #
-  # === Lookup Mechanism  
+  # === Lookup Mechanism
   # When the code asks for +Configuration['foo']+, we first check whether the current
   # environment's config section has a value for foo. If one is found, we return that.
   #
@@ -62,9 +62,10 @@ module HasGlobalSession
     # MissingConfiguration:: if config file is missing or unreadable
     # TypeError:: if config file does not contain a YAML-serialized Hash
     def initialize(config_file, environment)
-      raise MissingConfiguration, "Missing or unreadable configuration file" unless File.readable?(config_file)
-      @config      = YAML.load(File.read(config_file))
+      @config_file = config_file
       @environment = environment
+      raise MissingConfiguration, "Missing or unreadable configuration file" unless File.readable?(@config_file)
+      @config      = YAML.load(File.read(@config_file))
       raise TypeError, "#{config_file} must contain a Hash!" unless Hash === @config
       validate
     end
@@ -89,7 +90,7 @@ module HasGlobalSession
         elements.each do |element|
           object = object[element] if object
           if object.nil?
-            msg = "#{File.basename(config_file)} does not specify required element #{elements.map { |x| "['#{x}']"}.join('')}"
+            msg = "#{File.basename(@config_file)} does not specify required element #{elements.map { |x| "['#{x}']"}.join('')}"
             raise MissingConfiguration, msg
           end
         end
@@ -108,5 +109,5 @@ module HasGlobalSession
     rescue NoMethodError
       raise MissingConfiguration, "Configuration key '#{key}' not found"
     end
-  end  
+  end
 end
