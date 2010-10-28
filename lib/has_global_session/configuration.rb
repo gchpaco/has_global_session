@@ -84,17 +84,30 @@ module HasGlobalSession
     end
 
     def validate # :nodoc
-      ['attributes/signed', 'integrated', 'cookie/name', 'timeout'].each do |path|
-        elements = path.split '/'
-        object = get(elements.shift, false)
-        elements.each do |element|
-          object = object[element] if object
-          if object.nil?
-            msg = "#{File.basename(@config_file)} does not specify required element #{elements.map { |x| "['#{x}']"}.join('')}"
-            raise MissingConfiguration, msg
-          end
+      ['attributes/signed', 'integrated', 'cookie/name',
+       'timeout'].each {|k| validate_presence_of k}
+    end
+
+    protected
+
+    # Helper method to check the presence of a key.  Used in #validate.
+    #
+    # === Parameters
+    # key(String):: key name; for nested hashes, separate keys with /
+    #
+    # === Return
+    # true always
+    def validate_presence_of(key)
+      elements = key.split '/'
+      object = get(elements.shift, false)
+      elements.each do |element|
+        object = object[element] if object
+        if object.nil?
+          msg = "#{File.basename(@config_file)} does not specify required element #{elements.map { |x| "['#{x}']"}.join('')}"
+          raise MissingConfiguration, msg
         end
       end
+      true
     end
 
     private
